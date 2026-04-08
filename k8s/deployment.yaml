@@ -444,6 +444,10 @@ spec:
     metadata:
       labels:
         app: lexos-worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: lexos-api
       securityContext:
@@ -453,6 +457,9 @@ spec:
         - name: worker
           image: lexos/api:latest
           command: ["node", "dist/worker-main.js"]
+          ports:
+            - containerPort: 9100
+              name: metrics
           envFrom:
             - secretRef:
                 name: lexos-secrets
@@ -465,7 +472,7 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1000m"
-          # Workers have no HTTP port, use exec probe instead
+          # Worker app has no business HTTP port; expose only metrics and use exec liveness probe
           livenessProbe:
             exec:
               command:

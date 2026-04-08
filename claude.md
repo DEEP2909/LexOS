@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-08, Session 9)
+## Claude Context File (Updated: 2026-04-08, Session 10)
 
-## Project Status: ✅ COMPLETE (All Issues Fixed - Round 9)
+## Project Status: ✅ COMPLETE (All Issues Fixed - Round 10)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -14,35 +14,27 @@
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
 
-## Latest Fixes (2026-04-08 Session 9)
-### Issues Fixed from Updated issues.md (4 Major/Minor Issues):
+## Latest Fixes (2026-04-08 Session 10)
+### Issues Fixed from Updated issues.md (1 Minor Wiring Issue):
 
 | Issue | Severity | Description | Status |
 |-------|----------|-------------|--------|
-| #1 | Major | Worker liveness probe always passed | ✅ Added worker heartbeat file + age-based liveness check |
-| #2 | Major | `prom-client` dependency missing | ✅ Added `prom-client` to `apps/api/package.json` |
-| #3 | Minor | `/api/research/query` tracking in try block | ✅ Moved billing tracking to `finally` with guarded logging |
-| #4 | Minor | Extract/Research explanation output dropped | ✅ Verified schema + response already include `explanation` payload |
+| #1 | Minor | `prom-client` present but not wired to worker metrics endpoint | ✅ Added worker metrics registry, queue metrics polling, `/metrics` server, and Kubernetes scrape annotations/port |
 
-### Files Modified (Session 9):
+### Files Modified (Session 10):
 
 **apps/api/src/worker-main.ts:**
-- Added `/tmp/worker-heartbeat` writer (startup + 30s interval)
-- Cleared heartbeat interval during graceful shutdown
+- Added Prometheus registry via `prom-client` (`Registry`, `collectDefaultMetrics`)
+- Added `bullmq_document_queue_depth` gauge and `bullmq_jobs_processed_total{status}` counter updates
+- Added `/metrics` HTTP server on port `9100`
+- Added clean shutdown for metrics server + metrics interval alongside heartbeat cleanup
 
 **k8s/deployment.yaml:**
-- Replaced trivial exec liveness with heartbeat age validation (<90s)
-- Updated probe timings (`initialDelaySeconds: 45`, `periodSeconds: 30`, `failureThreshold: 3`)
+- Added worker pod Prometheus scrape annotations (`/metrics`, port `9100`)
+- Exposed worker container metrics port `9100`
 
-**apps/api/src/routes.ts:**
-- Added `usageStarted` guard in `/api/research/query`
-- Moved `trackResearchUsage(...)` into `finally` with `.catch(...)` logging
-
-**apps/api/package.json:**
-- Added `"prom-client": "^15.1.3"`
-
-## Session 8 Fixes (2026-04-08 Prior Session)
-### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):
+## Session 9 Fixes (2026-04-08 Prior Session)
+### Issues Fixed from Updated issues.md (4 Major/Minor Issues):
 
 ## Session 7 Fixes (2026-04-08 Prior Session)
 ### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):
