@@ -1,0 +1,544 @@
+# LexOS Kubernetes Deployment
+# Production-ready configuration with autoscaling and secrets management
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lexos
+  labels:
+    app.kubernetes.io/name: lexos
+    app.kubernetes.io/component: namespace
+
+---
+# External Secrets (AWS Secrets Manager / HashiCorp Vault)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: lexos-secrets
+  namespace: lexos
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager
+  target:
+    name: lexos-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: lexos/production/database
+        property: url
+    - secretKey: REDIS_URL
+      remoteRef:
+        key: lexos/production/redis
+        property: url
+    - secretKey: JWT_PRIVATE_KEY
+      remoteRef:
+        key: lexos/production/jwt
+        property: private_key
+    - secretKey: JWT_PUBLIC_KEY
+      remoteRef:
+        key: lexos/production/jwt
+        property: public_key
+    - secretKey: APP_ENCRYPTION_KEY
+      remoteRef:
+        key: lexos/production/encryption
+        property: key
+    - secretKey: STRIPE_SECRET_KEY
+      remoteRef:
+        key: lexos/production/stripe
+        property: secret_key
+    - secretKey: STRIPE_WEBHOOK_SECRET
+      remoteRef:
+        key: lexos/production/stripe
+        property: webhook_secret
+
+---
+# ConfigMap for non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lexos-config
+  namespace: lexos
+data:
+  NODE_ENV: "production"
+  PORT: "4000"
+  AI_SERVICE_URL: "http://ai-service:5000"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  OTEL_SERVICE_NAME: "lexos-api"
+  MALWARE_SCANNER: "clamav"
+  CLAMAV_HOST: "clamav"
+  CLAMAV_PORT: "3310"
+
+---
+# API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: lexos
+  labels:
+    app: lexos-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lexos-api
+  template:
+    metadata:
+      labels:
+        app: lexos-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: lexos-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: api
+          image: lexos/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: lexos-config
+            - secretRef:
+                name: lexos-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: lexos-api
+                topologyKey: kubernetes.io/hostname
+
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: lexos
+spec:
+  selector:
+    app: lexos-api
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: http
+  type: ClusterIP
+
+---
+# API HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: lexos
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# AI Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: lexos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lexos-ai-service
+  template:
+    metadata:
+      labels:
+        app: lexos-ai-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: ai-service
+          image: lexos/ai-service:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: OLLAMA_BASE_URL
+              value: "http://ollama:11434"
+            - name: GPU_ENABLED
+              value: "false"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "8Gi"
+              cpu: "4000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+---
+# AI Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  namespace: lexos
+spec:
+  selector:
+    app: lexos-ai-service
+  ports:
+    - port: 5000
+      targetPort: 5000
+
+---
+# Web Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: lexos
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lexos-web
+  template:
+    metadata:
+      labels:
+        app: lexos-web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: web
+          image: lexos/web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://api.lexos.ai"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+# Web Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: lexos
+spec:
+  selector:
+    app: lexos-web
+  ports:
+    - port: 3000
+      targetPort: 3000
+
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lexos-ingress
+  namespace: lexos
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+    - hosts:
+        - lexos.ai
+        - api.lexos.ai
+      secretName: lexos-tls
+  rules:
+    - host: lexos.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 3000
+    - host: api.lexos.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 4000
+
+---
+# PodDisruptionBudget for API
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: lexos
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: lexos-api
+
+---
+# NetworkPolicy - Restrict pod-to-pod communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: lexos
+spec:
+  podSelector:
+    matchLabels:
+      app: lexos-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - port: 4000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: lexos-ai-service
+      ports:
+        - port: 5000
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+
+---
+# ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lexos-api
+  namespace: lexos
+
+---
+# Worker Deployment (Issue #1 fix - BullMQ document processing workers)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: lexos
+  labels:
+    app: lexos-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lexos-worker
+  template:
+    metadata:
+      labels:
+        app: lexos-worker
+    spec:
+      serviceAccountName: lexos-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: worker
+          image: lexos/api:latest
+          command: ["node", "dist/worker-main.js"]
+          envFrom:
+            - secretRef:
+                name: lexos-secrets
+            - configMapRef:
+                name: lexos-config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          # Workers have no HTTP port, use exec probe instead
+          livenessProbe:
+            exec:
+              command: ["node", "-e", "process.exit(0)"]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: lexos-worker
+                topologyKey: kubernetes.io/hostname
+
+---
+# Worker PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker-pdb
+  namespace: lexos
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: lexos-worker
+
+---
+# NetworkPolicy for Worker
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-network-policy
+  namespace: lexos
+spec:
+  podSelector:
+    matchLabels:
+      app: lexos-worker
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []  # Workers don't accept incoming connections
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: lexos-ai-service
+      ports:
+        - port: 5000
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app: clamav
+      ports:
+        - port: 3310

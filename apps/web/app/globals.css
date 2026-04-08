@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LexOS Design System Colors */
+    --navy: 222.2 47.4% 11.2%;
+    --navy-light: 217.2 32.6% 17.5%;
+    --gold: 43 54% 54%;
+    --gold-light: 43 45% 70%;
+
+    /* Risk Colors */
+    --risk-critical: 0 84% 60%;
+    --risk-high: 24 95% 53%;
+    --risk-medium: 37 91% 55%;
+    --risk-low: 142 76% 36%;
+
+    /* Shadcn/ui Theme Variables */
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 43 54% 54%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 47.4% 11.2%;
+
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 222.2 47.4% 11.2%;
+    --chart-2: 43 54% 54%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 24 95% 53%;
+    --chart-5: 0 84% 60%;
+  }
+
+  .dark {
+    --background: 222.2 47.4% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 47.4% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 47.4% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 43 54% 54%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 43 54% 54%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 43 54% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Risk badge styles */
+  .risk-critical {
+    @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+  }
+  .risk-high {
+    @apply bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400;
+  }
+  .risk-medium {
+    @apply bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+  .risk-low {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  /* Gold gradient for accent elements */
+  .gold-gradient {
+    @apply bg-gradient-to-r from-[hsl(var(--gold))] to-[hsl(var(--gold-light))];
+  }
+
+  /* Navy gradient for headers */
+  .navy-gradient {
+    @apply bg-gradient-to-r from-[hsl(var(--navy))] to-[hsl(var(--navy-light))];
+  }
+
+  /* Document viewer highlight styles */
+  .clause-highlight {
+    @apply bg-amber-200/50 dark:bg-amber-900/30 border-l-4 border-amber-500;
+  }
+  .clause-highlight-active {
+    @apply bg-amber-300/60 dark:bg-amber-800/40 border-l-4 border-amber-600;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted rounded-full;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30;
+  }
+
+  /* Animation for AI processing indicator */
+  .ai-pulse {
+    animation: ai-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes ai-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Skeleton loading animation */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

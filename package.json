@@ -1,0 +1,35 @@
+{
+  "name": "lexos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LexOS - Enterprise Legal AI Platform for USA Law Firms",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build --workspaces --if-present",
+    "build:api": "npm run build -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:isolation": "npm run test:isolation -w apps/api",
+    "migrate": "npm run migrate -w apps/api",
+    "migrate:up": "npm run migrate:up -w apps/api",
+    "migrate:down": "npm run migrate:down -w apps/api",
+    "seed": "npm run seed -w apps/api",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "author": "LexOS Team",
+  "license": "UNLICENSED"
+}

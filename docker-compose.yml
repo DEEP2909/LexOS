@@ -1,0 +1,258 @@
+version: "3.9"
+
+services:
+  # ============================================================
+  # PostgreSQL with pgvector extension
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: lexos-postgres
+    environment:
+      POSTGRES_DB: lexos
+      POSTGRES_USER: lexos
+      POSTGRES_PASSWORD: lexos_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lexos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Redis for BullMQ and caching
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: lexos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # MinIO (S3-compatible object storage for local dev)
+  # ============================================================
+  minio:
+    image: minio/minio:latest
+    container_name: lexos-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_dev_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # ClamAV Antivirus Scanner
+  # ============================================================
+  clamav:
+    image: clamav/clamav:1.3
+    container_name: lexos-clamav
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --version || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Ollama LLM Server (optional - enable with --profile llm)
+  # ============================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lexos-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles:
+      - llm
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Python AI Service (FastAPI)
+  # ============================================================
+  ai-service:
+    build:
+      context: ./apps/ai-service
+      dockerfile: Dockerfile
+    container_name: lexos-ai-service
+    ports:
+      - "5000:5000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MODEL_CACHE_DIR=/models
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - EMBEDDING_DIM=384
+      - OCR_ENGINES=tesseract,easyocr
+      - GPU_ENABLED=false
+    volumes:
+      - model_cache:/models
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Python Celery AI Worker
+  # ============================================================
+  ai-worker:
+    build:
+      context: ./apps/ai-worker
+      dockerfile: Dockerfile
+    container_name: lexos-ai-worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - AI_SERVICE_URL=http://ai-service:5000
+    depends_on:
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Node.js API Server (Fastify)
+  # ============================================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.api
+    container_name: lexos-api
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgresql://lexos:lexos_dev_password@postgres:5432/lexos
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:5000
+      - STORAGE_BACKEND=s3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=lexos-documents
+      - S3_ACCESS_KEY=minio_admin
+      - S3_SECRET_KEY=minio_dev_password
+      - MALWARE_SCANNER=clamav
+      - CLAMAV_HOST=clamav
+      - CLAMAV_PORT=3310
+      - SEED_DEMO_DATA=true
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./keys:/app/keys:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Node.js BullMQ Worker
+  # ============================================================
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.api
+    container_name: lexos-worker
+    command: ["node", "dist/worker-main.js"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://lexos:lexos_dev_password@postgres:5432/lexos
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:5000
+      - STORAGE_BACKEND=s3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=lexos-documents
+      - S3_ACCESS_KEY=minio_admin
+      - S3_SECRET_KEY=minio_dev_password
+      - MALWARE_SCANNER=clamav
+      - CLAMAV_HOST=clamav
+      - CLAMAV_PORT=3310
+    volumes:
+      - ./keys:/app/keys:ro
+    networks:
+      - lexos-network
+
+  # ============================================================
+  # Next.js Frontend
+  # ============================================================
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.web
+    container_name: lexos-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:4000
+    networks:
+      - lexos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  clamav_data:
+  ollama_data:
+  model_cache:
+
+networks:
+  lexos-network:
+    driver: bridge

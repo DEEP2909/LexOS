@@ -1,0 +1,60 @@
+# ============================================================
+# LexOS API Dockerfile
+# Node.js Fastify API Server
+# ============================================================
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/api/package.json ./apps/api/
+
+# Install dependencies
+RUN npm ci --workspace=@lexos/shared --workspace=@lexos/api
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+
+# Build shared package first, then API
+RUN npm run build -w @lexos/shared
+RUN npm run build -w @lexos/api
+
+# ============================================================
+# Production image
+# ============================================================
+FROM node:20-alpine AS runner
+
+# Security: Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 node
+
+WORKDIR /app
+
+# Copy built artifacts
+COPY --from=builder --chown=node:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=node:nodejs /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=node:nodejs /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder --chown=node:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=node:nodejs /app/apps/api/package.json ./apps/api/
+
+# Copy migrations
+COPY --chown=node:nodejs db/migrations ./db/migrations
+
+# Create directories for keys and storage
+RUN mkdir -p /app/keys /app/storage && chown -R node:nodejs /app
+
+# Security: Run as non-root user
+USER node
+
+WORKDIR /app/apps/api
+
+EXPOSE 4000
+
+ENV NODE_ENV=production
+ENV PORT=4000
+
+CMD ["node", "dist/index.js"]

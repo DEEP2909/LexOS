@@ -1,0 +1,56 @@
+# ============================================================
+# LexOS Web Dockerfile
+# Next.js Frontend Application
+# ============================================================
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/web/package.json ./apps/web/
+
+# Install dependencies
+RUN npm ci --workspace=@lexos/shared --workspace=@lexos/web
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY apps/web ./apps/web
+
+# Build shared package first
+RUN npm run build -w @lexos/shared
+
+# Build Next.js app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build -w @lexos/web
+
+# ============================================================
+# Production image
+# ============================================================
+FROM node:20-alpine AS runner
+
+# Security: Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy built artifacts
+COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+
+# Security: Run as non-root user
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]

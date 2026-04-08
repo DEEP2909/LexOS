@@ -1,0 +1,583 @@
+# LexOS Production Docker Compose
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.9'
+
+x-common-labels: &common-labels
+  com.lexos.environment: production
+  com.lexos.version: ${LEXOS_VERSION:-1.0.0}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "10"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+services:
+  # ============================================================================
+  # API SERVICE - Production Configuration
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        NODE_ENV: production
+    image: lexos/api:${LEXOS_VERSION:-latest}
+    deploy:
+      mode: replicated
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      # Database - use connection pooling
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_POOL_MIN: 5
+      DATABASE_POOL_MAX: 20
+      DATABASE_SSL: 'true'
+      # Redis
+      REDIS_URL: ${REDIS_URL}
+      REDIS_TLS: 'true'
+      # Security
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      # AI Service
+      AI_SERVICE_URL: http://ai-service:8000
+      # S3 Storage
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      # Telemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: lexos-api
+      # Security settings
+      RATE_LIMIT_ENABLED: 'true'
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      MALWARE_SCANNER: clamav
+      SEED_DEMO_DATA: 'false'
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+    labels:
+      <<: *common-labels
+      traefik.enable: "true"
+      traefik.http.routers.api.rule: "Host(`api.${DOMAIN}`)"
+      traefik.http.routers.api.entrypoints: "websecure"
+      traefik.http.routers.api.tls: "true"
+      traefik.http.routers.api.tls.certresolver: "letsencrypt"
+      traefik.http.services.api.loadbalancer.server.port: "3001"
+      traefik.http.services.api.loadbalancer.healthcheck.path: "/health"
+      traefik.http.services.api.loadbalancer.healthcheck.interval: "10s"
+      # Rate limiting
+      traefik.http.middlewares.api-ratelimit.ratelimit.average: "100"
+      traefik.http.middlewares.api-ratelimit.ratelimit.burst: "200"
+      traefik.http.routers.api.middlewares: "api-ratelimit@docker"
+    logging: *logging
+    secrets:
+      - jwt_secret
+      - jwt_refresh_secret
+      - encryption_key
+      - stripe_secret_key
+    networks:
+      - internal
+      - traefik
+
+  # ============================================================================
+  # WEB SERVICE - Production Configuration
+  # ============================================================================
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NODE_ENV: production
+        NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
+    image: lexos/web:${LEXOS_VERSION:-latest}
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
+      NEXTAUTH_URL: https://${DOMAIN}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+    labels:
+      <<: *common-labels
+      traefik.enable: "true"
+      traefik.http.routers.web.rule: "Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
+      traefik.http.routers.web.entrypoints: "websecure"
+      traefik.http.routers.web.tls: "true"
+      traefik.http.routers.web.tls.certresolver: "letsencrypt"
+      traefik.http.services.web.loadbalancer.server.port: "3000"
+      # Redirect www to non-www
+      traefik.http.middlewares.www-redirect.redirectregex.regex: "^https://www\\.(.*)"
+      traefik.http.middlewares.www-redirect.redirectregex.replacement: "https://$${1}"
+      traefik.http.routers.web.middlewares: "www-redirect@docker"
+    logging: *logging
+    networks:
+      - internal
+      - traefik
+
+  # ============================================================================
+  # AI SERVICE - Production Configuration
+  # ============================================================================
+  ai-service:
+    build:
+      context: .
+      dockerfile: apps/ai-service/Dockerfile
+      args:
+        ENVIRONMENT: production
+    image: lexos/ai-service:${LEXOS_VERSION:-latest}
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    environment:
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      # Redis
+      REDIS_URL: ${REDIS_URL}
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Embedding model
+      EMBEDDING_MODEL: text-embedding-3-large
+      EMBEDDING_DIMENSIONS: 3072
+      # LLM
+      LLM_MODEL: gpt-4o
+      LLM_TEMPERATURE: 0.1
+      # Telemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: lexos-ai-service
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # AI WORKER - Production Configuration
+  # ============================================================================
+  ai-worker:
+    build:
+      context: .
+      dockerfile: apps/ai-worker/Dockerfile
+      args:
+        ENVIRONMENT: production
+    image: lexos/ai-worker:${LEXOS_VERSION:-latest}
+    deploy:
+      mode: replicated
+      replicas: 4
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      # Redis/Celery
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${REDIS_URL}
+      CELERY_RESULT_BACKEND: ${REDIS_URL}
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # S3
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # ClamAV
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      # Telemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: lexos-ai-worker
+    command: celery -A celery_app worker -l INFO -c 4 -Q default,documents,embedding,analysis,notifications
+    stop_grace_period: 60s
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # CELERY BEAT SCHEDULER - Single instance
+  # ============================================================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: apps/ai-worker/Dockerfile
+    image: lexos/ai-worker:${LEXOS_VERSION:-latest}
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    environment:
+      ENVIRONMENT: production
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${REDIS_URL}
+      DATABASE_URL: ${DATABASE_URL}
+    command: celery -A celery_app beat -l INFO --scheduler celery.beat:PersistentScheduler
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # POSTGRESQL - Production (External recommended, included for reference)
+  # ============================================================================
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.db == true
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lexos}
+      POSTGRES_USER: ${POSTGRES_USER:-lexos}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=64MB
+      - -c
+      - default_statistics_target=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - min_wal_size=2GB
+      - -c
+      - max_wal_size=8GB
+      - -c
+      - max_worker_processes=4
+      - -c
+      - max_parallel_workers_per_gather=2
+      - -c
+      - max_parallel_workers=4
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/etc/ssl/certs/server.crt
+      - -c
+      - ssl_key_file=/etc/ssl/private/server.key
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./certs/postgres:/etc/ssl/certs:ro
+      - ./certs/postgres:/etc/ssl/private:ro
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lexos} -d ${POSTGRES_DB:-lexos}"]
+    secrets:
+      - postgres_password
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # REDIS - Production Configuration
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - "1gb"
+      - --maxmemory-policy
+      - "volatile-lru"
+      - --requirepass
+      - "${REDIS_PASSWORD}"
+      - --tls-port
+      - "6379"
+      - --port
+      - "0"
+      - --tls-cert-file
+      - /etc/redis/tls/redis.crt
+      - --tls-key-file
+      - /etc/redis/tls/redis.key
+      - --tls-ca-cert-file
+      - /etc/redis/tls/ca.crt
+    volumes:
+      - redis_data:/data
+      - ./certs/redis:/etc/redis/tls:ro
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/etc/redis/tls/redis.crt", "--key", "/etc/redis/tls/redis.key", "--cacert", "/etc/redis/tls/ca.crt", "ping"]
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # CLAMAV - Antivirus Scanner
+  # ============================================================================
+  clamav:
+    image: clamav/clamav:stable
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    environment:
+      CLAMAV_NO_FRESHCLAM: "false"
+      FRESHCLAM_DELAY: "3600"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "clamdscan", "--ping", "3"]
+      interval: 60s
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+  # ============================================================================
+  # TRAEFIK - Reverse Proxy & Load Balancer
+  # ============================================================================
+  traefik:
+    image: traefik:v3.0
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    command:
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.swarmMode=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=traefik
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --accesslog=true
+      - --accesslog.filepath=/var/log/traefik/access.log
+      - --accesslog.format=json
+      - --log.level=INFO
+      - --metrics.prometheus=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - traefik_logs:/var/log/traefik
+    labels:
+      <<: *common-labels
+      traefik.enable: "true"
+      # Dashboard
+      traefik.http.routers.dashboard.rule: "Host(`traefik.${DOMAIN}`)"
+      traefik.http.routers.dashboard.entrypoints: "websecure"
+      traefik.http.routers.dashboard.tls: "true"
+      traefik.http.routers.dashboard.service: "api@internal"
+      traefik.http.routers.dashboard.middlewares: "dashboard-auth"
+      traefik.http.middlewares.dashboard-auth.basicauth.users: "${TRAEFIK_DASHBOARD_AUTH}"
+    logging: *logging
+    networks:
+      - traefik
+
+  # ============================================================================
+  # OPENTELEMETRY COLLECTOR
+  # ============================================================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    labels:
+      <<: *common-labels
+    logging: *logging
+    networks:
+      - internal
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/lexos/postgres
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/lexos/redis
+  clamav_data:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
+  traefik_logs:
+    driver: local
+
+# ============================================================================
+# SECRETS
+# ============================================================================
+secrets:
+  jwt_secret:
+    external: true
+  jwt_refresh_secret:
+    external: true
+  encryption_key:
+    external: true
+  stripe_secret_key:
+    external: true
+  postgres_password:
+    external: true
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  internal:
+    driver: overlay
+    internal: true
+    attachable: true
+  traefik:
+    driver: overlay
+    attachable: true
