@@ -6,16 +6,13 @@ Extract and track contractual obligations with deadlines.
 import json
 import logging
 import re
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from enum import Enum
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from llm_safety import SafeLLMClient, LLMConfig, add_legal_disclaimer
-from domain_models import ObligationType as DomainObligationType
 from prompts import OBLIGATION_EXTRACTION, validate_response
 
 logger = logging.getLogger(__name__)

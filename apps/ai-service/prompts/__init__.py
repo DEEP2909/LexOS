@@ -4,7 +4,6 @@ Centralized prompt engineering for legal AI tasks.
 All prompts follow legal domain best practices and include safety guardrails.
 """
 
-from typing import Optional, List
 from dataclasses import dataclass
 
 

@@ -3,7 +3,7 @@
  * Redis-based rate limiter with per-user and per-tenant quotas
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Redis } from 'ioredis';
 import { config } from './config.js';
 import { logger } from './logger.js';
@@ -67,10 +67,10 @@ function getRedis(): Redis | null {
       });
       
       redis.on('error', (err) => {
-        logger.error('Redis rate limiter error:', err);
+        logger.error({ err }, 'Redis rate limiter error');
       });
     } catch (err) {
-      logger.warn('Failed to initialize Redis for rate limiting:', err);
+      logger.warn({ err }, 'Failed to initialize Redis for rate limiting');
     }
   }
   return redis;
@@ -110,7 +110,7 @@ async function checkRateLimit(
       resetAt,
     };
   } catch (err) {
-    logger.error('Rate limit check failed:', err);
+    logger.error({ err }, 'Rate limit check failed');
     // On error, allow request
     return { allowed: true, remaining: config.maxRequests, resetAt: Date.now() + config.windowMs };
   }
@@ -173,7 +173,7 @@ export interface UsageRecord {
 export async function trackUsage(
   tenantId: string,
   type: keyof UsageRecord,
-  amount: number = 1
+  amount = 1
 ): Promise<void> {
   const redisClient = getRedis();
   if (!redisClient) return;
@@ -186,7 +186,7 @@ export async function trackUsage(
     // Set expiry to 90 days for usage data retention
     await redisClient.expire(key, 90 * 24 * 60 * 60);
   } catch (err) {
-    logger.error('Failed to track usage:', err);
+    logger.error({ err }, 'Failed to track usage');
   }
 }
 
@@ -211,13 +211,13 @@ export async function getUsage(tenantId: string, month?: string): Promise<UsageR
   try {
     const data = await redisClient.hgetall(key);
     return {
-      documents: parseInt(data.documents || '0', 10),
-      storage: parseInt(data.storage || '0', 10),
-      aiQueries: parseInt(data.aiQueries || '0', 10),
-      apiCalls: parseInt(data.apiCalls || '0', 10),
+      documents: Number.parseInt(data.documents || '0', 10),
+      storage: Number.parseInt(data.storage || '0', 10),
+      aiQueries: Number.parseInt(data.aiQueries || '0', 10),
+      apiCalls: Number.parseInt(data.apiCalls || '0', 10),
     };
   } catch (err) {
-    logger.error('Failed to get usage:', err);
+    logger.error({ err }, 'Failed to get usage');
     return defaults;
   }
 }

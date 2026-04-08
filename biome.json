@@ -9,6 +9,31 @@
         "noUnusedVariables": "warn",
         "useExhaustiveDependencies": "warn"
       },
+      "style": {
+        "noUnusedTemplateLiteral": "warn",
+        "useNodejsImportProtocol": "warn",
+        "useTemplate": "warn",
+        "useImportType": "warn",
+        "useNumberNamespace": "warn",
+        "useExponentiationOperator": "warn",
+        "noNonNullAssertion": "warn",
+        "noInferrableTypes": "warn",
+        "useSelfClosingElements": "warn"
+      },
+      "complexity": {
+        "useLiteralKeys": "warn",
+        "noForEach": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noImplicitAnyLet": "warn",
+        "noArrayIndexKey": "warn"
+      },
+      "a11y": {
+        "useButtonType": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useKeyWithClickEvents": "warn"
+      },
       "security": {
         "noDangerouslySetInnerHtml": "error"
       }

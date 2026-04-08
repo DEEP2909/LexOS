@@ -6,14 +6,12 @@ Semantic legal research with RAG (Retrieval Augmented Generation).
 import json
 import logging
 from typing import Any, AsyncGenerator, Dict, List, Optional
-from enum import Enum
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from llm_safety import SafeLLMClient, LLMConfig, add_legal_disclaimer
 from explainability import explain_research_result
 from prompts import RESEARCH_QUERY, add_safety_guardrails
 

@@ -12,8 +12,6 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from llm_safety import SafeLLMClient, LLMConfig, add_legal_disclaimer
-from domain_models import ClauseType as DomainClauseType
 from explainability import explain_clause_extraction
 from prompts import CLAUSE_EXTRACTION, validate_response
 

@@ -6,7 +6,7 @@ Circuit breaker, retry logic, timeouts, and fallback models for resilient AI cal
 import asyncio
 import time
 import logging
-from typing import Any, Callable, Optional, TypeVar, Generic
+from typing import Any, Callable, Optional, TypeVar
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
@@ -228,7 +228,7 @@ class SafeLLMClient:
                 result = response.json()
                 circuit_breaker.record_success()
                 return result
-        except Exception as e:
+        except Exception:
             circuit_breaker.record_failure()
             raise
     

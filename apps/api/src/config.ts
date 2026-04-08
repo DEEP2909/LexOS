@@ -37,6 +37,7 @@ const configSchema = z.object({
   DB_IDLE_TIMEOUT_MS: z.coerce.number().default(30000),
   DB_CONNECT_TIMEOUT_MS: z.coerce.number().default(5000),
   DB_SSL: z.enum(['true', 'false']).default('false'),
+  DB_SSL_CA: z.string().optional(),
 
   // Seed
   SEED_DEMO_DATA: z.enum(['true', 'false']).default('false'),

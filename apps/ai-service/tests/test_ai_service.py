@@ -3,20 +3,16 @@ LexOS AI Service - Comprehensive Test Suite
 Tests for OCR, Embeddings, Clause Extraction, Risk Assessment, Research, and Obligations
 """
 
-import pytest
-import json
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
-import numpy as np
 from io import BytesIO
 
 # Import the FastAPI app
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.main import app, startup, shutdown
-from src.config import settings
+from src.main import app
 
 client = TestClient(app)
 
@@ -340,7 +336,6 @@ class TestClauseExtraction:
         
         if response.status_code == 200:
             data = response.json()
-            types = [c["type"] for c in data["clauses"]]
             # Should find termination clauses
             assert len(data["clauses"]) >= 0
     

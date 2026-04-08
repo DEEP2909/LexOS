@@ -4,12 +4,12 @@
  * Compatible with Okta and Azure AD SCIM provisioning
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { pool } from './database';
-import { auditRepo, attorneyRepo } from './repository';
-import { hashPassword, generateSecureToken } from './security';
-import { logger } from './logger';
+import { pool } from './database.js';
+import { auditRepo, attorneyRepo } from './repository.js';
+import { hashPassword, generateSecureToken } from './security.js';
+import { logger } from './logger.js';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -101,6 +101,8 @@ async function scimAuth(request: FastifyRequest, reply: FastifyReply): Promise<v
     [tokenHash]
   );
 }
+
+export const registerScimRoutes = scimRoutes;
 
 // ============================================================================
 // SCIM Response Helpers
@@ -279,8 +281,8 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = (request as any).tenantId;
     const query = request.query as { filter?: string; startIndex?: string; count?: string };
     
-    const startIndex = parseInt(query.startIndex || '1');
-    const count = Math.min(parseInt(query.count || '100'), 100);
+    const startIndex = Number.parseInt(query.startIndex || '1');
+    const count = Math.min(Number.parseInt(query.count || '100'), 100);
     
     // Parse filter (basic support)
     let whereClause = 'WHERE tenant_id = $1';
@@ -299,7 +301,7 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
       `SELECT COUNT(*) FROM attorneys ${whereClause}`,
       params
     );
-    const totalResults = parseInt(countResult.rows[0].count);
+    const totalResults = Number.parseInt(countResult.rows[0].count);
     
     params.push(count, startIndex - 1);
     const result = await pool.query(
@@ -602,7 +604,7 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:Group'],
       id,
       displayName: id.charAt(0).toUpperCase() + id.slice(1).replace('_', ' '),
-      members: members.rows.map(m => ({
+      members: members.rows.map((m: { id: string; display_name: string }) => ({
         value: m.id,
         display: m.display_name,
       })),
@@ -663,7 +665,7 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:Group'],
       id: role,
       displayName: role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' '),
-      members: members.rows.map(m => ({
+      members: members.rows.map((m: { id: string; display_name: string }) => ({
         value: m.id,
         display: m.display_name,
       })),

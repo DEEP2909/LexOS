@@ -1,9 +1,9 @@
 // LexOS - SAML 2.0 Service Provider Implementation
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { type FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
-import { pool } from './database';
-import { logger } from './logger';
+import { pool } from './database.js';
+import { logger } from './logger.js';
 
 // SAML Configuration Schema
 const SAMLConfigSchema = z.object({
@@ -143,21 +143,22 @@ export async function parseSAMLResponse(
   // Extract attributes
   const attributes: Record<string, string> = {};
   const attrRegex = /<saml:Attribute Name="([^"]+)"[^>]*>[\s\S]*?<saml:AttributeValue[^>]*>([^<]+)<\/saml:AttributeValue>/g;
-  let match;
-  while ((match = attrRegex.exec(decoded)) !== null) {
+  let match = attrRegex.exec(decoded);
+  while (match !== null) {
     attributes[match[1]] = match[2];
+    match = attrRegex.exec(decoded);
   }
 
   // Common attribute mappings
-  const email = attributes['email'] || 
+  const email = attributes.email || 
                 attributes['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
                 nameId;
 
-  const firstName = attributes['firstName'] ||
+  const firstName = attributes.firstName ||
                     attributes['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] ||
                     '';
 
-  const lastName = attributes['lastName'] ||
+  const lastName = attributes.lastName ||
                    attributes['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] ||
                    '';
 
@@ -448,6 +449,30 @@ export async function testSAMLConfiguration(
     valid: errors.length === 0,
     errors,
   };
+}
+
+export async function registerSamlRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/auth/saml/start', async (request, reply) => {
+    const { tenantId, baseUrl } = request.query as { tenantId?: string; baseUrl?: string };
+
+    if (!tenantId) {
+      return reply.status(400).send({ success: false, error: { message: 'tenantId is required' } });
+    }
+
+    const auth = await initiateSAMLLogin(tenantId, baseUrl || 'http://localhost:4000');
+    return { success: true, data: auth };
+  });
+
+  app.post('/auth/saml/callback', async (request, reply) => {
+    const body = z.object({
+      tenantId: z.string().uuid(),
+      samlResponse: z.string().min(1),
+      relayState: z.string().optional(),
+    }).parse(request.body);
+
+    const assertion = await handleSAMLCallback(body.tenantId, body.samlResponse, body.relayState);
+    return { success: true, data: assertion };
+  });
 }
 
 export const saml = {

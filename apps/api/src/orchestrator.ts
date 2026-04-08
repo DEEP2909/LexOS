@@ -4,8 +4,8 @@
  * Uses BullMQ Flow for declarative job chaining
  */
 
-import { FlowProducer, FlowJob, Queue, Job } from 'bullmq';
-import Redis from 'ioredis';
+import { FlowProducer, type FlowJob, Queue, Job } from 'bullmq';
+import { Redis } from 'ioredis';
 import { config } from './config.js';
 import { logger } from './logger.js';
 

@@ -10,7 +10,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import websocket from '@fastify/websocket';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 import { config, corsOrigins, rateLimits, isProduction } from './config.js';
 import { logger } from './logger.js';
@@ -18,7 +18,7 @@ import { pool, checkDatabaseHealth, closeDatabasePool } from './database.js';
 import { initializeAuth } from './auth.js';
 import { checkClamAVHealth } from './malware.js';
 import { registerRoutes } from './routes.js';
-import { registerScimRoutes } from './scim.js';
+import { scimRoutes } from './scim.js';
 import { registerSsoRoutes } from './sso.js';
 import { registerWebAuthnRoutes } from './webauthn.js';
 import { registerSamlRoutes } from './saml.js';
@@ -242,10 +242,10 @@ addVersionNegotiation(fastify);
 await registerRoutes(fastify);
 
 // Register SSO/SCIM/WebAuthn/SAML routes (Issue #1 fix)
-await registerScimRoutes(fastify, pool);
-await registerSsoRoutes(fastify, pool);
-await registerWebAuthnRoutes(fastify, pool);
-await registerSamlRoutes(fastify, pool);
+await fastify.register(scimRoutes);
+await registerSsoRoutes(fastify);
+registerWebAuthnRoutes(fastify, pool);
+await registerSamlRoutes(fastify);
 
 // Initialize WebSocket server for real-time events (await to ensure Redis adapter connects)
 await initializeWebSocket(fastify.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);

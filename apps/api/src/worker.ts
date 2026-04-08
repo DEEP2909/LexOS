@@ -4,17 +4,17 @@
  * MUST handle SIGTERM gracefully - drain in-flight jobs before exit
  */
 
-import { Worker, Queue, Job } from 'bullmq';
-import Redis from 'ioredis';
-import { config } from './config';
-import { logger } from './logger';
-import { traceJob, addSpanEvent } from './tracing';
-import { documentRepo, clauseRepo, flagRepo, obligationRepo, matterRepo, vectorRepo } from './repository';
-import { scanFile, getScanResult } from './malware';
-import { downloadFile, moveFile } from './storage';
-import { pool } from './database';
-import { updatePipelineStatus } from './orchestrator';
-import { sendMalwareAlertEmail } from './email';
+import { Worker, Queue, type Job } from 'bullmq';
+import { Redis } from 'ioredis';
+import { config } from './config.js';
+import { logger } from './logger.js';
+import { traceJob, addSpanEvent } from './tracing.js';
+import { documentRepo, clauseRepo, flagRepo, obligationRepo, matterRepo, vectorRepo } from './repository.js';
+import { scanBuffer } from './malware.js';
+import { downloadFile, moveFile } from './storage.js';
+import { pool } from './database.js';
+import { updatePipelineStatus } from './orchestrator.js';
+import { sendMalwareAlertEmail } from './email.js';
 import axios from 'axios';
 import crypto from 'crypto';
 
@@ -131,6 +131,17 @@ interface ObligationExtractJob {
   matterId: string;
 }
 
+interface DocumentRow {
+  file_uri: string;
+  mime_type: string;
+  normalized_text: string;
+  doc_type: string;
+}
+
+interface MatterRow {
+  governing_law_state: string | null;
+}
+
 // ============================================================================
 // Worker: document.scan
 // ============================================================================
@@ -154,12 +165,13 @@ const documentScanWorker = new Worker<DocumentScanJob>(
         const fileBuffer = await downloadFile(fileUri);
         
         // Scan with ClamAV
-        const scanResult = await scanFile(fileBuffer);
+        const scanResult = await scanBuffer(fileBuffer);
         
-        if (scanResult.infected) {
-          logger.warn({ tenantId, documentId, virus: scanResult.viruses }, 'Malware detected');
+        if (!scanResult.clean) {
+          const viruses = scanResult.virus ? [scanResult.virus] : ['unknown'];
+          logger.warn({ tenantId, documentId, virus: viruses }, 'Malware detected');
           await documentRepo.updateStatus(tenantId, documentId, 'quarantined', 'infected');
-          addSpanEvent('malware_detected', { virus: scanResult.viruses?.join(',') || 'unknown' });
+          addSpanEvent('malware_detected', { virus: viruses.join(',') });
           await updatePipelineStatus(tenantId, documentId, 'failed', -1, 'Malware detected');
 
           const adminResult = await pool.query<{
@@ -182,12 +194,12 @@ const documentScanWorker = new Worker<DocumentScanJob>(
           const adminContact = adminResult.rows[0];
           if (adminContact?.email) {
             try {
-              await sendMalwareAlertEmail(
-                adminContact.email,
-                adminContact.source_name || documentId,
-                adminContact.tenant_name,
-                scanResult.viruses || ['unknown']
-              );
+                await sendMalwareAlertEmail(
+                  adminContact.email,
+                  adminContact.source_name || documentId,
+                  adminContact.tenant_name,
+                  viruses
+                );
             } catch (notifyError: any) {
               logger.error(
                 { tenantId, documentId, error: notifyError.message },
@@ -198,7 +210,7 @@ const documentScanWorker = new Worker<DocumentScanJob>(
             logger.warn({ tenantId, documentId }, 'No active admin found for malware alert');
           }
 
-          return { status: 'infected', viruses: scanResult.viruses };
+          return { status: 'infected', viruses };
         }
 
         // Move from quarantine to uploads
@@ -254,7 +266,7 @@ const documentIngestWorker = new Worker<DocumentIngestJob>(
       
       try {
         // Get document
-        const document = await documentRepo.findById(tenantId, documentId);
+        const document = await documentRepo.findById(tenantId, documentId) as DocumentRow | null;
         if (!document) throw new Error('Document not found');
         
         // Download file
@@ -384,7 +396,7 @@ const clauseExtractWorker = new Worker<ClauseExtractJob>(
       logger.info({ tenantId, documentId }, 'Starting clause extraction');
       
       try {
-        const document = await documentRepo.findById(tenantId, documentId);
+        const document = await documentRepo.findById(tenantId, documentId) as DocumentRow | null;
         if (!document) throw new Error('Document not found');
         
         // Call AI service for clause extraction
@@ -483,7 +495,7 @@ const riskAssessWorker = new Worker<RiskAssessJob>(
         const allRules = playbooks.rows.flatMap((p: any) => JSON.parse(p.rules));
         
         // Get matter for jurisdiction context
-        const matter = await matterRepo.findById(tenantId, matterId);
+        const matter = await matterRepo.findById(tenantId, matterId) as MatterRow | null;
         const jurisdiction = matter?.governing_law_state;
         
         // Assess each clause against playbook rules
@@ -572,7 +584,7 @@ const obligationExtractWorker = new Worker<ObligationExtractJob>(
       logger.info({ tenantId, documentId }, 'Starting obligation extraction');
       
       try {
-        const document = await documentRepo.findById(tenantId, documentId);
+        const document = await documentRepo.findById(tenantId, documentId) as DocumentRow | null;
         if (!document) throw new Error('Document not found');
         
         // Call AI service
@@ -798,6 +810,27 @@ export async function enqueueDocumentScan(tenantId: string, documentId: string, 
     fileUri,
   });
   return job.id || documentId;
+}
+
+export async function addJob(
+  name: 'report.generate' | 'obligation.remind' | 'document.scan',
+  data: Record<string, unknown>
+): Promise<Job> {
+  switch (name) {
+    case 'document.scan': {
+      const { tenantId, documentId, fileUri } = data as Partial<DocumentScanJob>;
+      if (!tenantId || !documentId || !fileUri) {
+        throw new Error('document.scan requires tenantId, documentId, and fileUri');
+      }
+      return documentQueue.add(name, { tenantId, documentId, fileUri });
+    }
+    case 'obligation.remind':
+      return obligationQueue.add(name, data);
+    case 'report.generate':
+      return documentQueue.add(name, data);
+    default:
+      throw new Error(`Unsupported job type: ${name}`);
+  }
 }
 
 export async function getJobStatus(queueName: string, jobId: string): Promise<any> {

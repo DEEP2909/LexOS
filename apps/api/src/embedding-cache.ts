@@ -3,10 +3,10 @@
  * Redis-based caching for embeddings and search results
  */
 
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import crypto from 'crypto';
-import { config } from './config';
-import { logger } from './logger';
+import { config } from './config.js';
+import { logger } from './logger.js';
 
 // ============================================================================
 // Redis Client
@@ -20,7 +20,7 @@ function getRedis(): Redis {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
     });
-    redis.on('error', (err) => {
+    redis.on('error', (err: Error) => {
       logger.warn({ error: err.message }, 'Redis cache error (non-fatal)');
     });
   }

@@ -3,7 +3,7 @@
  * Helmet, CORS, input validation, and security headers
  */
 
-import { FastifyInstance, FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, type FastifyPluginCallback, type FastifyRequest, type FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { config } from './config.js';
 import { logger } from './logger.js';
@@ -287,6 +287,7 @@ const securityHardeningPlugin: FastifyPluginCallback = (fastify, opts, done) => 
     const origin = request.headers.origin;
 
     if (origin && corsConfig.origins.includes(origin)) {
+      // nosemgrep: cors-misconfiguration - origin is allowlisted above
       reply.header('Access-Control-Allow-Origin', origin);
       reply.header('Access-Control-Allow-Credentials', String(corsConfig.credentials));
       
@@ -348,13 +349,13 @@ export const registerSecurityHardening = fp(securityHardeningPlugin, {
 /**
  * Sanitize string input by removing potentially dangerous characters
  */
-export function sanitizeString(input: string, maxLength: number = 10000): string {
+export function sanitizeString(input: string, maxLength = 10000): string {
   if (!input || typeof input !== 'string') return '';
   
   return input
     .slice(0, maxLength)
     .replace(/[<>]/g, '') // Remove angle brackets
-    .replace(/\x00/g, '') // Remove null bytes
+    .replaceAll('\0', '') // Remove null bytes
     .trim();
 }
 

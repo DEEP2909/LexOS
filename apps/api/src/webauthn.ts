@@ -47,6 +47,20 @@ interface StoredChallenge {
   expiresAt: Date;
 }
 
+interface RequestUser {
+  tenantId: string;
+  attorneyId: string;
+  email?: string;
+  displayName?: string;
+  role?: string;
+}
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    user?: RequestUser;
+  }
+}
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -142,7 +156,7 @@ async function saveCredential(
   tenantId: string,
   attorneyId: string,
   credential: {
-    credentialId: Uint8Array;
+    credentialId: Uint8Array | string;
     credentialPublicKey: Uint8Array;
     counter: number;
     credentialDeviceType: string;
@@ -165,7 +179,9 @@ async function saveCredential(
       id,
       tenantId,
       attorneyId,
-      Buffer.from(credential.credentialId),
+      typeof credential.credentialId === 'string'
+        ? Buffer.from(credential.credentialId, 'base64url')
+        : Buffer.from(credential.credentialId),
       Buffer.from(credential.credentialPublicKey),
       credential.counter,
       credential.credentialDeviceType,
@@ -256,7 +272,7 @@ export async function generatePasskeyRegistrationOptions(
   const existingCredentials = await getCredentialsForUser(db, tenantId, attorneyId);
   
   const excludeCredentials = existingCredentials.map((cred) => ({
-    id: cred.credentialId,
+    id: cred.credentialId.toString('base64url'),
     type: 'public-key' as const,
     transports: cred.transports,
   }));
@@ -362,13 +378,13 @@ export async function generatePasskeyAuthenticationOptions(
   tenantId?: string,
   attorneyId?: string
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
-  let allowCredentials: { id: Uint8Array; type: 'public-key'; transports?: AuthenticatorTransportFuture[] }[] = [];
+  let allowCredentials: { id: string; type: 'public-key'; transports?: AuthenticatorTransportFuture[] }[] = [];
 
   // If we know the user, limit to their credentials
   if (tenantId && attorneyId) {
     const existingCredentials = await getCredentialsForUser(db, tenantId, attorneyId);
     allowCredentials = existingCredentials.map((cred) => ({
-      id: cred.credentialId,
+      id: cred.credentialId.toString('base64url'),
       type: 'public-key' as const,
       transports: cred.transports,
     }));
@@ -478,7 +494,7 @@ export async function verifyPasskeyAuthentication(
 export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
   // Get registered passkeys for current user
   app.get('/auth/passkeys', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { tenantId, attorneyId } = request.user as any;
+    const { tenantId, attorneyId } = request.user as RequestUser;
     
     const credentials = await getCredentialsForUser(db, tenantId, attorneyId);
     
@@ -494,7 +510,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
 
   // Start passkey registration
   app.post('/auth/passkeys/register/options', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { tenantId, attorneyId, email, displayName } = request.user as any;
+    const { tenantId, attorneyId, email = '', displayName = '' } = request.user as RequestUser;
     
     const options = await generatePasskeyRegistrationOptions(
       db,
@@ -511,7 +527,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
   app.post('/auth/passkeys/register/verify', async (request: FastifyRequest<{
     Body: { response: RegistrationResponseJSON; friendlyName?: string };
   }>, reply: FastifyReply) => {
-    const { tenantId, attorneyId } = request.user as any;
+    const { tenantId, attorneyId } = request.user as RequestUser;
     const { response, friendlyName } = request.body;
     
     const result = await verifyPasskeyRegistration(
@@ -533,7 +549,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
   app.delete('/auth/passkeys/:credentialId', async (request: FastifyRequest<{
     Params: { credentialId: string };
   }>, reply: FastifyReply) => {
-    const { tenantId, attorneyId } = request.user as any;
+    const { tenantId, attorneyId } = request.user as RequestUser;
     const { credentialId } = request.params;
     
     // Ensure user has at least one other auth method before deleting
@@ -567,7 +583,7 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
     Params: { credentialId: string };
     Body: { friendlyName: string };
   }>, reply: FastifyReply) => {
-    const { tenantId, attorneyId } = request.user as any;
+    const { tenantId, attorneyId } = request.user as RequestUser;
     const { credentialId } = request.params;
     const { friendlyName } = request.body;
     
@@ -661,14 +677,20 @@ export function registerWebAuthnRoutes(app: FastifyInstance, db: any): void {
     // Generate tokens (assuming jwt utilities are available)
     const { generateAccessToken, generateRefreshToken } = await import('./auth.js');
     
-    const accessToken = generateAccessToken({
-      attorneyId: attorney.id,
+    const accessToken = await generateAccessToken({
+      sub: attorney.id,
       tenantId: attorney.tenant_id,
       email: attorney.email,
       role: attorney.role,
     });
     
-    const refreshToken = await generateRefreshToken(db, attorney.id, attorney.tenant_id);
+    const refreshToken = await generateRefreshToken({
+      sub: attorney.id,
+      tenantId: attorney.tenant_id,
+      email: attorney.email,
+      role: attorney.role,
+      tokenId: randomBytes(16).toString('hex'),
+    });
     
     return {
       success: true,

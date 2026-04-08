@@ -4,7 +4,6 @@ FastAPI application for AI/ML capabilities including OCR, embeddings,
 clause extraction, risk assessment, and semantic research.
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict
@@ -139,7 +138,7 @@ async def run_eval(dataset: str = "default") -> Dict[str, Any]:
     from evaluation.datasets import load_golden_dataset
     
     try:
-        golden_dataset = load_golden_dataset(dataset)
+        load_golden_dataset(dataset)
         
         # Define a mock inference function for testing
         async def inference_fn(input_data: Dict[str, Any]) -> Dict[str, Any]:

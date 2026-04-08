@@ -5,7 +5,7 @@
  * EVERY query MUST include tenant_id filter.
  */
 
-import { pool, withTransaction } from './database';
+import { pool, withTransaction } from './database.js';
 import type {
   Attorney,
   Matter,
@@ -263,7 +263,7 @@ export const matterRepo = {
 
     return {
       items: result.rows,
-      total: parseInt(countResult.rows[0].count),
+      total: Number.parseInt(countResult.rows[0].count),
     };
   },
 
@@ -357,14 +357,14 @@ export const matterRepo = {
     );
 
     const flagsByRisk: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0 };
-    flagsResult.rows.forEach(row => {
-      flagsByRisk[row.severity] = parseInt(row.count);
-    });
+    for (const row of flagsResult.rows as Array<{ severity: string; count: string }>) {
+      flagsByRisk[row.severity] = Number.parseInt(row.count);
+    }
 
     return {
-      totalDocuments: parseInt(result.rows[0].total_documents),
-      totalClauses: parseInt(result.rows[0].total_clauses),
-      processingQueue: parseInt(result.rows[0].processing_queue),
+      totalDocuments: Number.parseInt(result.rows[0].total_documents),
+      totalClauses: Number.parseInt(result.rows[0].total_clauses),
+      processingQueue: Number.parseInt(result.rows[0].processing_queue),
       flagsByRisk,
     };
   },
@@ -424,7 +424,7 @@ export const documentRepo = {
 
     return {
       items: result.rows,
-      total: parseInt(countResult.rows[0].count),
+      total: Number.parseInt(countResult.rows[0].count),
     };
   },
 
@@ -641,7 +641,7 @@ export const flagRepo = {
 
     return {
       items: result.rows,
-      total: parseInt(countResult.rows[0].count),
+      total: Number.parseInt(countResult.rows[0].count),
     };
   },
 

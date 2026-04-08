@@ -5,14 +5,13 @@ Generate intelligent contract redline suggestions.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from enum import Enum
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from llm_safety import SafeLLMClient, LLMConfig, add_legal_disclaimer
 from prompts import REDLINE_SUGGESTION, add_safety_guardrails, validate_response
 
 logger = logging.getLogger(__name__)

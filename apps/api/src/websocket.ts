@@ -3,10 +3,10 @@
  * Socket.io implementation for live updates
  */
 
-import { Server as SocketServer, Socket } from 'socket.io';
+import { Server as SocketServer, type Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
-import { jwtVerify, importSPKI } from 'jose';
+import { jwtVerify, importSPKI, type KeyLike } from 'jose';
 import fs from 'fs';
 import type { Server as HttpServer } from 'http';
 
@@ -89,7 +89,7 @@ interface PresenceEvent {
 // ============================================================================
 
 let io: SocketServer | null = null;
-let publicKey: CryptoKey | null = null;
+let publicKey: KeyLike | Uint8Array | null = null;
 let devModeNoAuth = false;
 
 export async function initializeWebSocket(
@@ -422,16 +422,17 @@ export function broadcastSystemMessage(message: string): void {
 
 export async function shutdownWebSocket(): Promise<void> {
   if (!io) return;
+  const currentIo = io;
 
   // Notify all clients
-  io.emit('system:shutdown', {
+  currentIo.emit('system:shutdown', {
     message: 'Server is shutting down for maintenance',
     reconnectIn: 30,
   });
 
   // Close all connections
   await new Promise<void>((resolve) => {
-    io!.close(() => {
+    currentIo.close(() => {
       console.log('WebSocket: Server closed');
       resolve();
     });

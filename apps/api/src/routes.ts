@@ -25,7 +25,7 @@ import { query, queryOne, withTransaction } from './database.js';
 import { config, rateLimits } from './config.js';
 import { sendPasswordResetEmail, sendInvitationEmail } from './email.js';
 import { logger } from './logger.js';
-import { getCachedEmbedding, setCachedEmbedding } from './embedding-cache.js';
+import { getCachedEmbedding, cacheEmbedding } from './embedding-cache.js';
 import { startDocumentPipeline, getPipelineStatus } from './orchestrator.js';
 import { buildAIContext, formatContextForPrompt } from './ai-context.js';
 import {
@@ -33,8 +33,8 @@ import {
   enforceResearchQuota,
   enforceAttorneyLimit,
   enforceActiveSubscription,
-  trackDocumentUsage,
-  trackResearchUsage,
+  incrementDocumentUsage,
+  incrementResearchUsage,
 } from './billing-enforcement.js';
 
 // ============================================================
@@ -46,6 +46,15 @@ interface AuthenticatedRequest extends FastifyRequest {
   attorneyId: string;
   attorneyRole: string;
   tokenPayload: AccessTokenPayload;
+}
+
+interface ResearchChunkRow {
+  id: string;
+  document_id: string;
+  text_content: string;
+  chunk_index: number;
+  document_title: string;
+  relevance_score: number;
 }
 
 // ============================================================
@@ -590,8 +599,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const authReq = request as AuthenticatedRequest;
     const queryParams = request.query as { page?: string; limit?: string; status?: string; search?: string };
 
-    const page = parseInt(queryParams.page || '1', 10);
-    const limit = Math.min(parseInt(queryParams.limit || '20', 10), 100);
+    const page = Number.parseInt(queryParams.page || '1', 10);
+    const limit = Math.min(Number.parseInt(queryParams.limit || '20', 10), 100);
     const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE m.tenant_id = $1';
@@ -653,8 +662,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         pagination: {
           page,
           limit,
-          total: parseInt(countResult?.count || '0', 10),
-          totalPages: Math.ceil(parseInt(countResult?.count || '0', 10) / limit),
+          total: Number.parseInt(countResult?.count || '0', 10),
+          totalPages: Math.ceil(Number.parseInt(countResult?.count || '0', 10) / limit),
         },
       },
     };
@@ -884,33 +893,40 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       [authReq.tenantId, matterId, filename, data.mimetype, docType, sha256Hash, authReq.attorneyId]
     );
 
+    if (!document) {
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'DOCUMENT_CREATE_FAILED', message: 'Failed to create document' },
+      });
+    }
+
     // Store file in quarantine
     const storage = await import('./storage.js');
-    const fileKey = storage.generateDocumentKey(authReq.tenantId, document!.id, filename, 'quarantine');
+    const fileKey = storage.generateDocumentKey(authReq.tenantId, document.id, filename, 'quarantine');
     await storage.uploadFile(fileKey, buffer, { contentType: data.mimetype });
 
     // Update document with file URI
     await query(
       `UPDATE documents SET file_uri = $1 WHERE id = $2`,
-      [fileKey, document!.id]
+      [fileKey, document.id]
     );
 
     // Start the document processing pipeline via orchestrator
     const pipelineId = await startDocumentPipeline({
       tenantId: authReq.tenantId,
-      documentId: document!.id,
+      documentId: document.id,
       matterId,
       fileUri: fileKey,
     });
-    logger.info({ documentId: document!.id, pipelineId }, 'Document pipeline started');
+    logger.info({ documentId: document.id, pipelineId }, 'Document pipeline started');
 
     // Track document usage for billing
-    await trackDocumentUsage(authReq.tenantId);
+    await incrementDocumentUsage(authReq.tenantId);
 
     return reply.status(201).send({
       success: true,
       data: {
-        id: document!.id,
+        id: document.id,
         sourceName: filename,
         ingestionStatus: 'uploaded',
         securityStatus: 'pending',
@@ -1047,8 +1063,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       const authReq = request as AuthenticatedRequest;
       const queryParams = request.query as { page?: string; limit?: string; eventType?: string };
 
-      const page = parseInt(queryParams.page || '1', 10);
-      const limit = Math.min(parseInt(queryParams.limit || '50', 10), 100);
+      const page = Number.parseInt(queryParams.page || '1', 10);
+      const limit = Math.min(Number.parseInt(queryParams.limit || '50', 10), 100);
       const offset = (page - 1) * limit;
 
       let whereClause = 'WHERE tenant_id = $1';
@@ -1106,7 +1122,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // Try cache first
       const cached = await getCachedEmbedding(cacheKey, 'all-MiniLM-L6-v2');
       if (cached) {
-        embeddings = [cached.vector];
+        embeddings = [cached];
         logger.debug('Using cached embedding for research query');
       } else {
         // Fetch from AI service
@@ -1120,11 +1136,18 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         if (!embedRes.ok) {
           throw new Error('Failed to embed question');
         }
-        const result = await embedRes.json();
+        const result = await embedRes.json() as { embeddings?: number[][] };
+        if (!result.embeddings || result.embeddings.length === 0) {
+          throw new Error('No embeddings returned from AI service');
+        }
         embeddings = result.embeddings;
         
         // Cache for future use
-        await setCachedEmbedding(cacheKey, embeddings![0], 'all-MiniLM-L6-v2');
+        await cacheEmbedding(cacheKey, 'all-MiniLM-L6-v2', embeddings[0]);
+      }
+
+      if (!embeddings || embeddings.length === 0) {
+        throw new Error('Missing embeddings for research query');
       }
 
       // 2. Search for relevant chunks
@@ -1148,7 +1171,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         ? [`[${embeddings[0].join(',')}]`, authReq.tenantId, matterId]
         : [`[${embeddings[0].join(',')}]`, authReq.tenantId];
 
-      const chunks = await query(searchQuery, searchParams);
+      const chunks = await query<ResearchChunkRow>(searchQuery, searchParams);
 
       // 3. Build AI context for enhanced reasoning (if matter-scoped)
       let contextPrompt = '';
@@ -1219,13 +1242,13 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         success: false,
         error: { code: 'RESEARCH_FAILED', message: 'Research query failed' }
       });
-    } finally {
-      if (usageStarted) {
-        await trackResearchUsage(authReq.tenantId).catch((e) => {
-          logger.error({ e }, 'Failed to track research usage on /query');
-        });
+      } finally {
+        if (usageStarted) {
+          await incrementResearchUsage(authReq.tenantId).catch((e) => {
+            logger.error({ e }, 'Failed to track research usage on /query');
+          });
+        }
       }
-    }
   });
 
   // POST /api/research/stream - SSE streaming response for legal research
@@ -1260,7 +1283,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       
       const cached = await getCachedEmbedding(cacheKey, 'all-MiniLM-L6-v2');
       if (cached) {
-        embeddings = [cached.vector];
+        embeddings = [cached];
         logger.debug('Using cached embedding for research stream');
       } else {
         const embedRes = await fetch(`${config.AI_SERVICE_URL}/embed`, {
@@ -1268,9 +1291,16 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ texts: [question] }),
         });
-        const result = await embedRes.json();
+        const result = await embedRes.json() as { embeddings?: number[][] };
+        if (!result.embeddings || result.embeddings.length === 0) {
+          throw new Error('No embeddings returned from AI service');
+        }
         embeddings = result.embeddings;
-        await setCachedEmbedding(cacheKey, embeddings![0], 'all-MiniLM-L6-v2');
+        await cacheEmbedding(cacheKey, 'all-MiniLM-L6-v2', embeddings[0]);
+      }
+
+      if (!embeddings || embeddings.length === 0) {
+        throw new Error('Missing embeddings for research stream');
       }
 
       // 2. Search for relevant chunks
@@ -1294,7 +1324,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         ? [`[${embeddings[0].join(',')}]`, authReq.tenantId, matterId]
         : [`[${embeddings[0].join(',')}]`, authReq.tenantId];
 
-      const chunks = await query(searchQuery, searchParams);
+      const chunks = await query<ResearchChunkRow>(searchQuery, searchParams);
 
       // 3. Send sources immediately
       sendEvent({ 
@@ -1351,7 +1381,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     } finally {
       // Track research usage only if stream actually started (ensures billing accuracy)
       if (streamStarted) {
-        await trackResearchUsage(authReq.tenantId).catch((e) => {
+        await incrementResearchUsage(authReq.tenantId).catch((e) => {
           logger.error({ e }, 'Failed to track research usage');
         });
       }
@@ -1364,7 +1394,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const authReq = request as AuthenticatedRequest;
     const { matterId, limit = '20' } = request.query as { matterId?: string; limit?: string };
     
-    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const limitNum = Math.min(Number.parseInt(limit) || 20, 100);
     
     const queryStr = matterId
       ? `SELECT id, question, answer, citations, sources_used, created_at 
@@ -1516,8 +1546,22 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // Integration with Stripe via billing module
       try {
         const { createCheckoutSession } = await import('./billing.js');
+        const billingContact = await queryOne<{ email: string; firm_name: string }>(
+          `SELECT a.email, t.name as firm_name
+           FROM attorneys a
+           JOIN tenants t ON t.id = a.tenant_id
+           WHERE a.id = $1 AND a.tenant_id = $2`,
+          [authReq.attorneyId, authReq.tenantId]
+        );
+
+        if (!billingContact) {
+          return reply.status(404).send({ success: false, error: { message: 'Billing contact not found' } });
+        }
+
         const session = await createCheckoutSession(
           authReq.tenantId,
+          billingContact.email,
+          billingContact.firm_name,
           body.plan,
           body.successUrl,
           body.cancelUrl
@@ -1536,10 +1580,12 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     { preHandler: [authenticateRequest] },
     async (request, reply) => {
       const authReq = request as AuthenticatedRequest;
+      const { type } = request.query as { type?: 'document' | 'research' };
+      const quotaType: 'document' | 'research' = type === 'research' ? 'research' : 'document';
 
       try {
         const { checkQuota } = await import('./billing.js');
-        const quotaStatus = await checkQuota(authReq.tenantId);
+        const quotaStatus = await checkQuota(authReq.tenantId, quotaType);
         return { success: true, data: quotaStatus };
       } catch (error) {
         return reply.status(500).send({ success: false, error: { message: 'Quota check failed' } });
@@ -1559,9 +1605,9 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       const { state } = request.params as { state: string };
 
       try {
-        const { getRulesForState, US_STATES } = await import('./legal-rules.js');
+        const { getRulesForState, US_JURISDICTIONS } = await import('./legal-rules.js');
         
-        if (!US_STATES.includes(state.toUpperCase())) {
+        if (!US_JURISDICTIONS.some((jurisdiction) => jurisdiction.code === state.toUpperCase())) {
           return reply.status(400).send({ success: false, error: { message: 'Invalid state code' } });
         }
 
@@ -1611,13 +1657,11 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
       try {
         const { checkClauseCompliance } = await import('./legal-rules.js');
-        const result = checkClauseCompliance({
-          clauseType: body.clauseType,
-          text: body.text,
-          jurisdiction: body.jurisdiction,
-          jurisdictions: body.jurisdictions,
-          metadata: body.metadata,
-        });
+        const result = checkClauseCompliance(
+          body.clauseType,
+          body.text,
+          body.jurisdiction || 'US'
+        );
         return { success: true, data: result };
       } catch (error) {
         return reply.status(500).send({ success: false, error: { message: 'Compliance check failed' } });
@@ -1648,7 +1692,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         const { getJobStatus } = await import('./worker.js');
         
         // Try each queue type
-        const queues = ['document.scan', 'document.ingest', 'clause.extract', 'risk.assess', 'obligation.extract'];
+        const queues = ['document', 'clause', 'risk', 'obligation'];
         for (const queue of queues) {
           const status = await getJobStatus(queue, id);
           if (status) {
@@ -1732,7 +1776,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     // For now, return download URL to original file
     // Full implementation would generate DOCX with redlines
     const storage = await import('./storage.js');
-    const url = await storage.getSignedUrl(document.file_uri, 3600);
+    const url = await storage.getSignedDownloadUrl(document.file_uri, 3600);
 
     return { success: true, data: { downloadUrl: url, format: body.format } };
   });
@@ -1822,7 +1866,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const authReq = request as AuthenticatedRequest;
     const { id } = request.params as { id: string };
     const queryParams = request.query as { limit?: string };
-    const limit = Math.min(parseInt(queryParams.limit || '50', 10), 100);
+    const limit = Math.min(Number.parseInt(queryParams.limit || '50', 10), 100);
 
     const timeline = await query<{
       id: string;
@@ -2004,8 +2048,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const authReq = request as AuthenticatedRequest;
     const queryParams = request.query as { status?: string; page?: string; limit?: string };
     
-    const page = parseInt(queryParams.page || '1', 10);
-    const limit = Math.min(parseInt(queryParams.limit || '20', 10), 100);
+    const page = Number.parseInt(queryParams.page || '1', 10);
+    const limit = Math.min(Number.parseInt(queryParams.limit || '20', 10), 100);
     const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE o.tenant_id = $1';
@@ -2162,7 +2206,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     // Generate iCal format
-    const icalDate = new Date(obligation.deadline).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const icalDate = `${new Date(obligation.deadline).toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
     const ical = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//LexOS//Legal Platform//EN
@@ -2448,17 +2492,21 @@ END:VCALENDAR`;
       return newAttorney;
     });
 
+    if (!attorney) {
+      return reply.status(500).send({ success: false, error: { message: 'Failed to create attorney' } });
+    }
+
     // Generate tokens and login
     const tokenId = generateSecureToken(16);
     const accessToken = await generateAccessToken({
-      sub: attorney!.id,
+      sub: attorney.id,
       tenantId: invitation.tenant_id,
       email: body.email,
       role: invitation.role,
     });
 
     const newRefreshToken = await generateRefreshToken({
-      sub: attorney!.id,
+      sub: attorney.id,
       tenantId: invitation.tenant_id,
       email: body.email,
       role: invitation.role,
@@ -2468,7 +2516,7 @@ END:VCALENDAR`;
     await query(
       `INSERT INTO refresh_tokens (attorney_id, tenant_id, token_hash, user_agent, ip_address)
        VALUES ($1, $2, $3, $4, $5)`,
-      [attorney!.id, invitation.tenant_id, hashToken(newRefreshToken), request.headers['user-agent'], request.ip]
+      [attorney.id, invitation.tenant_id, hashToken(newRefreshToken), request.headers['user-agent'], request.ip]
     );
 
     reply.setCookie('refreshToken', newRefreshToken, {
@@ -2484,7 +2532,7 @@ END:VCALENDAR`;
       data: {
         accessToken,
         attorney: {
-          id: attorney!.id,
+          id: attorney.id,
           tenantId: invitation.tenant_id,
           email: body.email,
           displayName: body.displayName,

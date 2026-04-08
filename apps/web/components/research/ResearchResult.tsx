@@ -181,7 +181,7 @@ export function ResearchResult({
                     <div className="mt-3 pt-3 border-t space-y-3">
                       {source.snippet && (
                         <p className="text-sm text-muted-foreground italic">
-                          "{source.snippet}"
+                          &ldquo;{source.snippet}&rdquo;
                         </p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">

@@ -3,8 +3,8 @@
  * Document versioning, linking, and cross-document reasoning
  */
 
-import { pool } from './database';
-import { logger } from './logger';
+import { pool } from './database.js';
+import { logger } from './logger.js';
 
 // ============================================================================
 // Document Version Management
@@ -212,7 +212,7 @@ export async function buildAIContext(
     [tenantId, documentId]
   );
   
-  const primaryChunkIds = chunkResult.rows.map(r => r.id);
+  const primaryChunkIds = chunkResult.rows.map((r: { id: string }) => r.id);
   
   // Get linked documents with relevant chunks
   const linkedDocs = await getLinkedDocuments(tenantId, documentId);
@@ -231,7 +231,7 @@ export async function buildAIContext(
         title: link.document.title,
         type: link.document.type,
         linkType: link.linkType,
-        relevantChunks: linkedChunks.rows.map(r => r.id),
+        relevantChunks: linkedChunks.rows.map((r: { id: string }) => r.id),
       };
     })
   );
@@ -252,7 +252,7 @@ export async function buildAIContext(
         id: matter.id,
         title: matter.title,
         type: matter.matter_type,
-        documentCount: parseInt(matter.doc_count, 10),
+        documentCount: Number.parseInt(matter.doc_count, 10),
       };
     }
   }

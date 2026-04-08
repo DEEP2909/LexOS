@@ -3,7 +3,6 @@ LexOS Model Registry
 Manages loading and access to all AI/ML models.
 """
 
-import asyncio
 import logging
 from typing import Any, Dict, Optional
 
@@ -84,7 +83,6 @@ class ModelRegistry:
             try:
                 if engine == "tesseract":
                     # Tesseract is available via pytesseract
-                    import pytesseract
                     self._ocr_engines["tesseract"] = {"type": "tesseract", "available": True}
                     logger.info("Tesseract OCR initialized")
                     

@@ -3,7 +3,7 @@ LexOS Scoring Functions
 Specialized scoring metrics for legal AI tasks
 """
 
-from typing import List, Dict, Any, Tuple, Set
+from typing import List, Dict, Any, Set
 from dataclasses import dataclass
 
 

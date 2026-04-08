@@ -9,6 +9,8 @@ from datetime import datetime
 import json
 import logging
 
+from evaluation.datasets import GoldenDataset
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +97,7 @@ class Evaluator:
     
     async def evaluate(
         self,
-        dataset: "GoldenDataset",
+        dataset: GoldenDataset,
         inference_fn: Callable,
     ) -> EvaluationResult:
         """Run evaluation on a dataset"""

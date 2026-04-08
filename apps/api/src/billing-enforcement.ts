@@ -4,7 +4,7 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { checkQuota, incrementQuota, getBillingStatus, PLANS, PlanType } from './billing.js';
+import { checkQuota, incrementQuota, getBillingStatus, PLANS, type PlanType } from './billing.js';
 import { logger } from './logger.js';
 
 // ============================================================================
@@ -33,7 +33,7 @@ export async function enforceDocumentQuota(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const tenantId = (request as any).tenantId;
+  const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
   
   if (!tenantId) {
     return; // Let auth middleware handle this
@@ -71,7 +71,7 @@ export async function enforceResearchQuota(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const tenantId = (request as any).tenantId;
+  const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
   
   if (!tenantId) {
     return;
@@ -109,7 +109,7 @@ export async function enforceAttorneyLimit(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const tenantId = (request as any).tenantId;
+  const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
   
   if (!tenantId) {
     return;
@@ -153,7 +153,7 @@ export async function enforceActiveSubscription(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const tenantId = (request as any).tenantId;
+  const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
   
   if (!tenantId) {
     return;
@@ -196,7 +196,7 @@ export async function trackDocumentUsage(
 ): Promise<void> {
   // Only track successful responses
   if (reply.statusCode >= 200 && reply.statusCode < 300) {
-    const tenantId = (request as any).tenantId;
+    const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
     if (tenantId) {
       await incrementQuota(tenantId, 'document');
     }
@@ -211,11 +211,19 @@ export async function trackResearchUsage(
   reply: FastifyReply
 ): Promise<void> {
   if (reply.statusCode >= 200 && reply.statusCode < 300) {
-    const tenantId = (request as any).tenantId;
+    const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
     if (tenantId) {
       await incrementQuota(tenantId, 'research');
     }
   }
+}
+
+export async function incrementDocumentUsage(tenantId: string): Promise<void> {
+  await incrementQuota(tenantId, 'document');
+}
+
+export async function incrementResearchUsage(tenantId: string): Promise<void> {
+  await incrementQuota(tenantId, 'research');
 }
 
 // ============================================================================
@@ -227,7 +235,7 @@ export async function trackResearchUsage(
  */
 export function requireFeature(feature: keyof typeof PLANS.starter.features) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const tenantId = (request as any).tenantId;
+    const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
     
     if (!tenantId) {
       return;
@@ -260,7 +268,7 @@ export async function requirePremiumAI(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const tenantId = (request as any).tenantId;
+  const tenantId = (request as FastifyRequest & { tenantId?: string }).tenantId;
   
   if (!tenantId) {
     return;

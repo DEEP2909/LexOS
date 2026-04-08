@@ -65,7 +65,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">Team Members</h2>
-                  <p className="text-slate-400">Manage your firm's users and permissions</p>
+                  <p className="text-slate-400">Manage your firm&apos;s users and permissions</p>
                 </div>
                 <Button className="bg-[#C9A84C] hover:bg-[#B8973B] text-[#0A1628]"><Plus className="h-4 w-4 mr-2" />Invite Member</Button>
               </div>

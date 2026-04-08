@@ -3,9 +3,8 @@ LexOS AI Service - OCR Router
 Optical Character Recognition endpoints.
 """
 
-import io
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 import cv2
 import numpy as np

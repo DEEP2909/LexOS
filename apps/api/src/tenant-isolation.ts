@@ -4,7 +4,7 @@
  * CRITICAL: Every database query MUST be filtered by tenant_id
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginCallback } from 'fastify';
+import { FastifyInstance, type FastifyRequest, type FastifyReply, type FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { logger } from './logger.js';
 import { pool } from './database.js';
@@ -300,41 +300,45 @@ export async function checkTenantLimits(
   let limit = 0;
 
   switch (resourceType) {
-    case 'documents':
+    case 'documents': {
       limit = context.limits.maxDocuments;
       const docResult = await pool.query(
         'SELECT COUNT(*) FROM documents WHERE tenant_id = $1 AND deleted_at IS NULL',
         [tenantId]
       );
-      current = parseInt(docResult.rows[0].count, 10);
+      current = Number.parseInt(docResult.rows[0].count, 10);
       break;
+    }
 
-    case 'matters':
+    case 'matters': {
       limit = context.limits.maxMatters;
       const matterResult = await pool.query(
         'SELECT COUNT(*) FROM matters WHERE tenant_id = $1 AND deleted_at IS NULL',
         [tenantId]
       );
-      current = parseInt(matterResult.rows[0].count, 10);
+      current = Number.parseInt(matterResult.rows[0].count, 10);
       break;
+    }
 
-    case 'users':
+    case 'users': {
       limit = context.limits.maxUsers;
       const userResult = await pool.query(
         'SELECT COUNT(*) FROM attorneys WHERE tenant_id = $1 AND deleted_at IS NULL',
         [tenantId]
       );
-      current = parseInt(userResult.rows[0].count, 10);
+      current = Number.parseInt(userResult.rows[0].count, 10);
       break;
+    }
 
-    case 'storage':
+    case 'storage': {
       limit = context.limits.maxStorageBytes;
       const storageResult = await pool.query(
         'SELECT COALESCE(SUM(file_size_bytes), 0) FROM documents WHERE tenant_id = $1 AND deleted_at IS NULL',
         [tenantId]
       );
-      current = parseInt(storageResult.rows[0].coalesce, 10);
+      current = Number.parseInt(storageResult.rows[0].coalesce, 10);
       break;
+    }
   }
 
   // -1 means unlimited

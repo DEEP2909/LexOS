@@ -4,11 +4,11 @@
  */
 
 import Stripe from 'stripe';
-import { config } from './config';
-import { pool } from './database';
-import { logger } from './logger';
-import { auditRepo, tenantRepo } from './repository';
-import { sendPaymentFailedEmail } from './email';
+import { config } from './config.js';
+import { pool } from './database.js';
+import { logger } from './logger.js';
+import { auditRepo, tenantRepo } from './repository.js';
+import { sendPaymentFailedEmail } from './email.js';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -16,7 +16,7 @@ import crypto from 'crypto';
 // ============================================================================
 
 const stripe = new Stripe(config.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-04-10',
+  apiVersion: '2024-06-20',
 });
 
 // ============================================================================
@@ -158,10 +158,14 @@ export async function createCheckoutSession(
   });
   
   logger.info({ tenantId, plan, sessionId: session.id }, 'Created checkout session');
+
+  if (!session.url) {
+    throw new Error('Stripe checkout session URL missing');
+  }
   
   return {
     sessionId: session.id,
-    url: session.url!,
+    url: session.url,
   };
 }
 
@@ -234,7 +238,7 @@ export async function getBillingStatus(tenantId: string): Promise<BillingStatus>
   const planConfig = PLANS[tenant?.plan as PlanType] || PLANS.starter;
   
   // Default status for no subscription
-  let status: BillingStatus = {
+  const status: BillingStatus = {
     plan: (tenant?.plan || 'starter') as PlanType,
     status: 'none',
     currentPeriodEnd: null,
@@ -245,7 +249,7 @@ export async function getBillingStatus(tenantId: string): Promise<BillingStatus>
       documentsLimit: planConfig.features.maxDocumentsPerMonth,
       researchThisMonth: quota.current_month_research,
       researchLimit: planConfig.features.maxResearchQueriesPerMonth,
-      attorneysActive: parseInt(attorneyResult.rows[0].count),
+      attorneysActive: Number.parseInt(attorneyResult.rows[0].count),
       attorneysLimit: planConfig.features.maxAttorneys,
     },
   };
@@ -301,18 +305,18 @@ export async function checkQuota(
     const used = q.current_month_docs;
     return {
       allowed: limit === null || used < limit,
-      remaining: limit === null ? Infinity : Math.max(0, limit - used),
-      limit: limit || 0,
-    };
-  } else {
-    const limit = q.monthly_research_limit;
-    const used = q.current_month_research;
-    return {
-      allowed: limit === null || used < limit,
-      remaining: limit === null ? Infinity : Math.max(0, limit - used),
+      remaining: limit === null ? Number.POSITIVE_INFINITY : Math.max(0, limit - used),
       limit: limit || 0,
     };
   }
+
+  const limit = q.monthly_research_limit;
+  const used = q.current_month_research;
+  return {
+    allowed: limit === null || used < limit,
+    remaining: limit === null ? Number.POSITIVE_INFINITY : Math.max(0, limit - used),
+    limit: limit || 0,
+  };
 }
 
 export async function incrementQuota(tenantId: string, quotaType: 'document' | 'research'): Promise<void> {

@@ -153,7 +153,7 @@ export function UserManagement({
               Team Members
             </CardTitle>
             <CardDescription>
-              Manage your team's access and permissions
+              Manage your team&apos;s access and permissions
             </CardDescription>
           </div>
           {canInviteUsers && (

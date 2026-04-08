@@ -2,7 +2,7 @@
  * LexOS E2E Test Suite - Playwright Tests
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || 'http://localhost:3001';
@@ -95,7 +95,8 @@ test.describe('Dashboard', () => {
   });
   
   test('should display dashboard stats', async ({ page }) => {
-    await expect(page.locator('[data-testid="stat-card"]')).toHaveCount({ min: 1 });
+    const statCardCount = await page.locator('[data-testid="stat-card"]').count();
+    expect(statCardCount).toBeGreaterThan(0);
   });
   
   test('should show recent matters', async ({ page }) => {
@@ -294,7 +295,7 @@ test.describe('Research', () => {
     
     // Should show disclaimer
     const disclaimer = page.locator('text=AI-generated');
-    const visible = await disclaimer.isVisible().catch(() => false);
+    await disclaimer.isVisible().catch(() => false);
     // Disclaimer may be in results or always visible
   });
 });
@@ -318,9 +319,8 @@ test.describe('Analytics', () => {
     await page.waitForTimeout(2000);
     
     // Should have chart containers
-    await expect(page.locator('[data-testid="chart"]')).toHaveCount({ min: 1 }).catch(() => {
-      // Charts may be loaded differently
-    });
+    const chartCount = await page.locator('[data-testid="chart"]').count();
+    expect(chartCount).toBeGreaterThan(0);
   });
 });
 

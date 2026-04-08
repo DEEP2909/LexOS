@@ -103,6 +103,7 @@ export function addVersionNegotiation(app: FastifyInstance): void {
     }
     
     // Attach version to request for handlers
+    // biome-ignore lint/suspicious/noExplicitAny: Fastify request extension
     (request as any).apiVersion = requestedVersion;
   });
 }
@@ -141,6 +142,7 @@ export function versionedHandler<T>(
   handlers: Record<string, (request: FastifyRequest, reply: FastifyReply) => Promise<T>>
 ): (request: FastifyRequest, reply: FastifyReply) => Promise<T> {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<T> => {
+    // biome-ignore lint/suspicious/noExplicitAny: Fastify request extension
     const version = (request as any).apiVersion || CURRENT_API_VERSION;
     
     const handler = handlers[version] || handlers[CURRENT_API_VERSION];

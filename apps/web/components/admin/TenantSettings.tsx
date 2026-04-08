@@ -95,7 +95,7 @@ export function TenantSettingsPanel({
         <div>
           <h2 className="text-2xl font-bold">Organization Settings</h2>
           <p className="text-muted-foreground">
-            Manage your organization's configuration and security
+            Manage your organization&apos;s configuration and security
           </p>
         </div>
         {hasChanges && (

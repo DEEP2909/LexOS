@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
               <BarChart3 className="h-8 w-8 text-[#C9A84C]" />
               Firm Analytics
             </h1>
-            <p className="text-slate-400 mt-2">Monitor your firm's document intelligence metrics</p>
+            <p className="text-slate-400 mt-2">Monitor your firm&apos;s document intelligence metrics</p>
           </div>
           <div className="flex gap-2 bg-[#112240] rounded-lg p-1">
             {(['7d', '30d', '90d', '1y'] as const).map((range) => (

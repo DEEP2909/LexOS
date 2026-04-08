@@ -4,6 +4,7 @@
  */
 
 import pg from 'pg';
+import fs from 'fs';
 import { config } from './config.js';
 import { logger } from './logger.js';
 
@@ -18,7 +19,12 @@ export const pool = new Pool({
   max: config.DB_POOL_MAX,
   idleTimeoutMillis: config.DB_IDLE_TIMEOUT_MS,
   connectionTimeoutMillis: config.DB_CONNECT_TIMEOUT_MS,
-  ssl: config.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: config.DB_SSL === 'true'
+    ? {
+        rejectUnauthorized: true,
+        ca: config.DB_SSL_CA ? fs.readFileSync(config.DB_SSL_CA, 'utf8') : undefined,
+      }
+    : false,
 });
 
 // Connection event handlers

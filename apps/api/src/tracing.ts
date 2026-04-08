@@ -12,8 +12,8 @@ import { FastifyInstrumentation } from '@opentelemetry/instrumentation-fastify';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { RedisInstrumentation } from '@opentelemetry/instrumentation-redis-4';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { trace, context, SpanStatusCode, Span, SpanKind, Tracer } from '@opentelemetry/api';
-import { config } from './config';
+import { trace, context, SpanStatusCode, type Span, SpanKind, type Tracer } from '@opentelemetry/api';
+import { config } from './config.js';
 
 const SERVICE_NAME = config.OTEL_SERVICE_NAME || 'lexos-api';
 const SERVICE_VERSION = '1.0.0';

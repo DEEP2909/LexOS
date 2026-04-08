@@ -6,7 +6,6 @@ Provides reasoning chains, confidence scores, and supporting references for AI o
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from enum import Enum
-import json
 
 
 class ConfidenceLevel(str, Enum):

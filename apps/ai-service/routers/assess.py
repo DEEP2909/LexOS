@@ -9,11 +9,9 @@ from typing import Any, Dict, List, Optional
 from enum import Enum
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
-from llm_safety import SafeLLMClient, LLMConfig, add_legal_disclaimer
-from explainability import explain_risk_assessment
 from prompts import RISK_ASSESSMENT, validate_response
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ Text embedding generation endpoints.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field

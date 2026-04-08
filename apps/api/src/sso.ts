@@ -1,10 +1,10 @@
 // LexOS - OIDC/OAuth2 PKCE SSO Implementation
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { type FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as jose from 'jose';
 import { randomBytes, createHash } from 'crypto';
-import { config } from './config';
-import { pool } from './database';
-import { logger } from './logger';
+import { config } from './config.js';
+import { pool } from './database.js';
+import { logger } from './logger.js';
 
 // OIDC Provider Configuration
 interface OIDCProviderConfig {
@@ -371,7 +371,7 @@ export async function getSSOConfiguration(
     [tenantId]
   );
 
-  return result.rows.map(row => ({
+  return result.rows.map((row: { id: string; provider_type: string; issuer_url: string; enabled: boolean }) => ({
     id: row.id,
     providerType: row.provider_type,
     issuerUrl: row.issuer_url,
@@ -493,6 +493,31 @@ export async function jitProvisionUser(
   logger.info({ tenantId, email, provider }, 'User JIT provisioned via SSO');
 
   return { id: result.rows[0].id, created: true };
+}
+
+export async function registerSsoRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/auth/sso/start', async (request, reply) => {
+    const { tenantId, redirectUri } = request.query as { tenantId?: string; redirectUri?: string };
+
+    if (!tenantId) {
+      return reply.status(400).send({ success: false, error: { message: 'tenantId is required' } });
+    }
+
+    const callbackUrl = redirectUri || `${config.FRONTEND_URL}/auth/callback`;
+    const { authUrl, state } = await initiateOIDCLogin(tenantId, callbackUrl);
+    return { success: true, data: { authUrl, state } };
+  });
+
+  app.get('/auth/sso/callback', async (request, reply) => {
+    const { code, state } = request.query as { code?: string; state?: string };
+
+    if (!code || !state) {
+      return reply.status(400).send({ success: false, error: { message: 'Missing code or state' } });
+    }
+
+    const profile = await handleOIDCCallback(code, state);
+    return { success: true, data: profile };
+  });
 }
 
 export const sso = {

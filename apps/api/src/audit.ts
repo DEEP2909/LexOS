@@ -3,7 +3,7 @@
  * Comprehensive audit trail for compliance and security
  */
 
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { pool } from './database.js';
 import { logger } from './logger.js';
 
@@ -139,7 +139,7 @@ export async function audit(
   const userId = context.userId || (context.request as any)?.userId;
   
   if (!tenantId) {
-    logger.warn('Audit: Missing tenant ID for action', { action });
+    logger.warn({ action }, 'Audit: Missing tenant ID for action');
     return;
   }
   
@@ -191,10 +191,10 @@ export async function audit(
     
     // Log critical events to application logger as well
     if (severity === 'critical') {
-      logger.warn('AUDIT_CRITICAL', { action, tenantId, userId, resourceType, resourceId });
+      logger.warn({ action, tenantId, userId, resourceType, resourceId }, 'AUDIT_CRITICAL');
     }
   } catch (err) {
-    logger.error('Failed to write audit log:', err);
+    logger.error({ err }, 'Failed to write audit log');
     // Don't throw - audit failures shouldn't break the application
   }
 }
@@ -265,7 +265,7 @@ export async function queryAuditLogs(
       `SELECT COUNT(*) FROM audit_events WHERE ${whereClause}`,
       params
     );
-    const total = parseInt(countResult.rows[0].count, 10);
+    const total = Number.parseInt(countResult.rows[0].count, 10);
     
     // Get entries
     const result = await pool.query(
@@ -283,7 +283,7 @@ export async function queryAuditLogs(
       total,
     };
   } catch (err) {
-    logger.error('Failed to query audit logs:', err);
+    logger.error({ err }, 'Failed to query audit logs');
     throw err;
   }
 }
@@ -308,7 +308,7 @@ export function createAuditMiddleware(action: AuditAction, getContext?: (req: Fa
 /**
  * Retention policy - delete old audit logs
  */
-export async function cleanupOldAuditLogs(retentionDays: number = 365): Promise<number> {
+export async function cleanupOldAuditLogs(retentionDays = 365): Promise<number> {
   try {
     const result = await pool.query(
       `DELETE FROM audit_events 
@@ -321,7 +321,7 @@ export async function cleanupOldAuditLogs(retentionDays: number = 365): Promise<
     logger.info(`Cleaned up ${deleted} old audit log entries`);
     return deleted;
   } catch (err) {
-    logger.error('Failed to cleanup audit logs:', err);
+    logger.error({ err }, 'Failed to cleanup audit logs');
     throw err;
   }
 }
