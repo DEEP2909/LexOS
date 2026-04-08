@@ -1096,6 +1096,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       matterId: z.string().uuid().optional(),
     }).parse(request.body);
 
+    let usageStarted = false;
+
     try {
       // 1. Embed the question (with caching)
       let embeddings: number[][] | null = null;
@@ -1164,6 +1166,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // 4. Call AI service for synthesis
+      usageStarted = true;
       const aiResponse = await fetch(`${config.AI_SERVICE_URL}/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1196,9 +1199,6 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         ]
       );
 
-      // Track research usage for billing
-      await trackResearchUsage(authReq.tenantId);
-
       return {
         success: true, 
         data: {
@@ -1210,15 +1210,21 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
             relevance: c.relevance_score,
             snippet: c.text_content.slice(0, 200)
           })),
-          confidence: result.confidence || 0.85
-        }
-      };
+           confidence: result.confidence || 0.85
+         }
+       };
     } catch (error) {
       logger.error({ error }, 'Research query failed');
       return reply.status(500).send({
         success: false,
         error: { code: 'RESEARCH_FAILED', message: 'Research query failed' }
       });
+    } finally {
+      if (usageStarted) {
+        await trackResearchUsage(authReq.tenantId).catch((e) => {
+          logger.error({ e }, 'Failed to track research usage on /query');
+        });
+      }
     }
   });
 

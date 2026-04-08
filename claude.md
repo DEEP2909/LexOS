@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-08, Session 8)
+## Claude Context File (Updated: 2026-04-08, Session 9)
 
-## Project Status: ✅ COMPLETE (All Issues Fixed - Round 8)
+## Project Status: ✅ COMPLETE (All Issues Fixed - Round 9)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -14,40 +14,35 @@
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
 
-## Latest Fixes (2026-04-08 Session 8)
-### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):
+## Latest Fixes (2026-04-08 Session 9)
+### Issues Fixed from Updated issues.md (4 Major/Minor Issues):
 
 | Issue | Severity | Description | Status |
 |-------|----------|-------------|--------|
-| #1 | Critical | cancelPipeline passed object to updatePipelineStatus(progress arg) | ✅ Fixed call signature to use numeric progress + error message |
-| #2 | Critical | cancelPipeline checked wrong queue names | ✅ Updated queue scan to `document`, `clause`, `risk`, `obligation` |
-| #3 | Major | Worker autoscaling used CPU/memory (poor queue signal) | ✅ Removed worker HPA and raised worker replicas to 3 pending queue-depth autoscaling |
-| #4 | Moderate | Central prompt templates not used by routers | ✅ Wired prompt templates + response validation in assess/extract/research/suggest/obligations |
-| #5 | Moderate | Malware scan flow had TODO for admin alert | ✅ Added malware alert email template and worker notification query |
-| #6 | Moderate | Stripe invoice.payment_failed webhook had TODO | ✅ Added payment-failed email template and webhook notification flow |
+| #1 | Major | Worker liveness probe always passed | ✅ Added worker heartbeat file + age-based liveness check |
+| #2 | Major | `prom-client` dependency missing | ✅ Added `prom-client` to `apps/api/package.json` |
+| #3 | Minor | `/api/research/query` tracking in try block | ✅ Moved billing tracking to `finally` with guarded logging |
+| #4 | Minor | Extract/Research explanation output dropped | ✅ Verified schema + response already include `explanation` payload |
 
-### Files Modified (Session 8):
+### Files Modified (Session 9):
 
-**apps/api/src/orchestrator.ts:**
-- Fixed `cancelPipeline()` to target real BullMQ queues used by workers
-- Fixed `updatePipelineStatus()` cancellation call to match function signature
-
-**apps/api/src/worker.ts + apps/api/src/email.ts:**
-- Added `sendMalwareAlertEmail()` template and delivery path from malware detection branch
-- Added admin email lookup (tenant-scoped, active admin) with structured error logging
-
-**apps/api/src/billing.ts + apps/api/src/email.ts:**
-- Added `sendPaymentFailedEmail()` template and invocation from `invoice.payment_failed`
-- Added admin lookup and fallback invoice URL for account recovery flow
-
-**apps/ai-service/routers/{assess,extract,research,suggest,obligations}.py:**
-- Replaced inline LLM prompt strings with centralized templates from `prompts/__init__.py`
-- Added `validate_response(..., "json")` checks for structured LLM outputs
-- Added `add_safety_guardrails(...)` in non-streaming research response output
+**apps/api/src/worker-main.ts:**
+- Added `/tmp/worker-heartbeat` writer (startup + 30s interval)
+- Cleared heartbeat interval during graceful shutdown
 
 **k8s/deployment.yaml:**
-- Set worker deployment replicas to 3
-- Removed worker HPA block that scaled on CPU/memory
+- Replaced trivial exec liveness with heartbeat age validation (<90s)
+- Updated probe timings (`initialDelaySeconds: 45`, `periodSeconds: 30`, `failureThreshold: 3`)
+
+**apps/api/src/routes.ts:**
+- Added `usageStarted` guard in `/api/research/query`
+- Moved `trackResearchUsage(...)` into `finally` with `.catch(...)` logging
+
+**apps/api/package.json:**
+- Added `"prom-client": "^15.1.3"`
+
+## Session 8 Fixes (2026-04-08 Prior Session)
+### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):
 
 ## Session 7 Fixes (2026-04-08 Prior Session)
 ### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):

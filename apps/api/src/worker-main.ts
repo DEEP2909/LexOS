@@ -6,6 +6,18 @@
 import { startWorkers, gracefulShutdown as drainWorkers } from './worker.js';
 import { logger } from './logger.js';
 import { closeDatabasePool } from './database.js';
+import fs from 'node:fs';
+
+const HEARTBEAT_PATH = '/tmp/worker-heartbeat';
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
+function writeHeartbeat(): void {
+  try {
+    fs.writeFileSync(HEARTBEAT_PATH, new Date().toISOString(), 'utf8');
+  } catch (error) {
+    logger.error({ error }, 'Failed to write worker heartbeat');
+  }
+}
 
 logger.info('Starting LexOS worker process...');
 
@@ -13,12 +25,19 @@ logger.info('Starting LexOS worker process...');
 startWorkers();
 logger.info('All workers started successfully');
 
+// Write heartbeat to support liveness probing
+writeHeartbeat();
+const heartbeatInterval = setInterval(() => {
+  writeHeartbeat();
+}, HEARTBEAT_INTERVAL_MS);
+
 // ============================================================
 // GRACEFUL SHUTDOWN
 // ============================================================
 
 const shutdown = async (signal: string) => {
   logger.info({ signal }, 'Worker received shutdown signal...');
+  clearInterval(heartbeatInterval);
   
   // 1. Drain BullMQ workers and close Redis
   await drainWorkers();

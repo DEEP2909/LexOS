@@ -468,9 +468,20 @@ spec:
           # Workers have no HTTP port, use exec probe instead
           livenessProbe:
             exec:
-              command: ["node", "-e", "process.exit(0)"]
-            initialDelaySeconds: 30
-            periodSeconds: 60
+              command:
+                - node
+                - -e
+                - |
+                  const fs = require('node:fs');
+                  const heartbeatPath = '/tmp/worker-heartbeat';
+                  if (!fs.existsSync(heartbeatPath)) process.exit(1);
+                  const timestamp = Date.parse(fs.readFileSync(heartbeatPath, 'utf8').trim());
+                  if (Number.isNaN(timestamp)) process.exit(1);
+                  const ageSeconds = Math.floor((Date.now() - timestamp) / 1000);
+                  process.exit(ageSeconds < 90 ? 0 : 1);
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            failureThreshold: 3
           volumeMounts:
             - name: tmp
               mountPath: /tmp
