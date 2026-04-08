@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-08, Session 10)
+## Claude Context File (Updated: 2026-04-08, Session 11)
 
-## Project Status: ✅ COMPLETE (All Issues Fixed - Round 10)
+## Project Status: ✅ COMPLETE (All Issues Fixed - Round 11)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -14,27 +14,39 @@
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
 
-## Latest Fixes (2026-04-08 Session 10)
-### Issues Fixed from Updated issues.md (1 Minor Wiring Issue):
+## Latest Fixes (2026-04-08 Session 11)
+### Issues Fixed from Updated issues.md (4 CI Failures + 1 Warning):
 
 | Issue | Severity | Description | Status |
 |-------|----------|-------------|--------|
-| #1 | Minor | `prom-client` present but not wired to worker metrics endpoint | ✅ Added worker metrics registry, queue metrics polling, `/metrics` server, and Kubernetes scrape annotations/port |
+| #1 | Critical | API Docker image build failed due duplicate `node` user creation | ✅ Removed adduser/addgroup block and switched to built-in `node:node` ownership |
+| #2 | Critical | `npm run test:coverage` missing in CI path | ✅ Added API/root `test:coverage` scripts and coverage provider dependency |
+| #3 | Critical | Biome config missing in repo root | ✅ Added root `biome.json` configuration |
+| #4 | Critical | Duplicate `httpx==0.27.2` in AI requirements | ✅ Removed duplicate pin from testing section |
+| #5 | Warning | Deprecated Semgrep action namespace | ✅ Updated workflow to `semgrep/semgrep-action@v1` |
 
-### Files Modified (Session 10):
+### Files Modified (Session 11):
 
-**apps/api/src/worker-main.ts:**
-- Added Prometheus registry via `prom-client` (`Registry`, `collectDefaultMetrics`)
-- Added `bullmq_document_queue_depth` gauge and `bullmq_jobs_processed_total{status}` counter updates
-- Added `/metrics` HTTP server on port `9100`
-- Added clean shutdown for metrics server + metrics interval alongside heartbeat cleanup
+**apps/api/Dockerfile.api:**
+- Removed duplicate `node` user/group creation
+- Updated all `COPY --chown` and directory ownership to `node:node`
 
-**k8s/deployment.yaml:**
-- Added worker pod Prometheus scrape annotations (`/metrics`, port `9100`)
-- Exposed worker container metrics port `9100`
+**apps/api/package.json + package-lock.json + package.json (root):**
+- Added `test:coverage` script in API workspace (`vitest run --coverage`)
+- Added root `test:coverage` workspace script
+- Added `@vitest/coverage-v8` dev dependency
 
-## Session 9 Fixes (2026-04-08 Prior Session)
-### Issues Fixed from Updated issues.md (4 Major/Minor Issues):
+**biome.json (new):**
+- Added monorepo Biome configuration for lint/format/import organization
+
+**apps/ai-service/requirements.txt:**
+- Removed duplicate `httpx==0.27.2` from testing section
+
+**.github/workflows/ci.yml:**
+- Updated Semgrep action references to `semgrep/semgrep-action@v1`
+
+## Session 10 Fixes (2026-04-08 Prior Session)
+### Issues Fixed from Updated issues.md (1 Minor Wiring Issue):
 
 ## Session 7 Fixes (2026-04-08 Prior Session)
 ### Issues Fixed from Updated issues.md (6 Critical/Major/Moderate Issues):

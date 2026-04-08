@@ -17,6 +17,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:isolation": "npm run test:isolation -w apps/api",
     "migrate": "npm run migrate -w apps/api",
     "migrate:up": "npm run migrate:up -w apps/api",
