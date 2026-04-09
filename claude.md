@@ -1,9 +1,26 @@
 # LexOS - Enterprise Legal AI Platform
 ## Claude Context File (Updated: 2026-04-09, Session 15)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 16)
+## Project Status: ✅ CORE ISSUES FIXED (Round 17)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
+
+## Latest Fixes (2026-04-09 Session 17)
+### Full `issues.md` remediation — both failures resolved:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | `node-pg-migrate` jsonb/array defaults use `$pga$` dollar-quoting which breaks JSON parsing | ✅ Replaced all string-literal defaults with `pgm.func()` across 5 migration files (12 occurrences total) |
+| #2 | Major | `health.py` `readiness()` typed as `-> dict` but returns `JSONResponse`; mypy rejects this | ✅ Changed return type to `Union[Dict[str, Any], JSONResponse]`, moved `JSONResponse` import to top-level |
+
+### Files Modified (Session 17):
+- `db/migrations/20260101000000_initial-schema.js` — 7 jsonb/array defaults fixed (settings, tags, risk_factors, rules, metadata, payload, citations)
+- `db/migrations/20260101000001_auth-tables.js` — 1 jsonb default fixed (attribute_mapping)
+- `db/migrations/20260101000003_add-obligations.js` — 3 defaults fixed (reminder_days_before, metadata, compliance_citations)
+- `db/migrations/20260101000004_add-billing.js` — 1 jsonb default fixed (features_enabled)
+- `db/migrations/20260401000010_add-document-versions.js` — 1 jsonb default fixed (metadata)
+- `apps/ai-service/routers/health.py` — Union return type + top-level JSONResponse import
+- `../issues.md` — marked all resolved
 
 ## Latest Fixes (2026-04-09 Session 16)
 ### Full `issues.md` remediation — all 4 failures resolved:
@@ -683,7 +700,9 @@ lexos/
 │       ├── 20260401000005_add-webauthn.js
 │       ├── 20260401000006_add-sso.js
 │       ├── 20260401000007_add-scim.js
-│       └── 20260401000008_add-analytics.js
+│       ├── 20260401000008_add-analytics.js
+│       ├── 20260401000009_add-sources-used.js
+│       └── 20260401000010_add-document-versions.js (document_versions, document_links)
 │
 ├── config/
 │   └── otel-collector-config.yaml

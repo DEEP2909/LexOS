@@ -105,7 +105,7 @@ exports.up = (pgm) => {
     metadata: { 
       type: 'jsonb', 
       notNull: true, 
-      default: "'{}'",
+      default: pgm.func("'{}'"),
       comment: 'Additional metadata about the link relationship'
     },
     created_by: { 

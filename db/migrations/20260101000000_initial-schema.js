@@ -36,7 +36,7 @@ exports.up = (pgm) => {
     stripe_customer_id: { type: 'text' },
     stripe_subscription_id: { type: 'text' },
     logo_url: { type: 'text' },
-    settings: { type: 'jsonb', notNull: true, default: "'{}'" },
+    settings: { type: 'jsonb', notNull: true, default: pgm.func("'{}'") },
     created_at: {
       type: 'timestamptz',
       notNull: true,
@@ -116,7 +116,7 @@ exports.up = (pgm) => {
     target_close_date: { type: 'date' },
     deal_value_cents: { type: 'bigint' },
     notes: { type: 'text' },
-    tags: { type: 'text[]', default: "ARRAY[]::text[]" },
+    tags: { type: 'text[]', default: pgm.func("ARRAY[]::text[]") },
     created_by: {
       type: 'uuid',
       references: 'attorneys',
@@ -254,7 +254,7 @@ exports.up = (pgm) => {
     page_to: { type: 'integer' },
     risk_level: { type: 'text', notNull: true, default: "'low'" },
     confidence: { type: 'numeric(4,3)', notNull: true },
-    risk_factors: { type: 'jsonb', notNull: true, default: "'[]'" },
+    risk_factors: { type: 'jsonb', notNull: true, default: pgm.func("'[]'") },
     extraction_model: { type: 'text' },
     reviewer_status: { type: 'text', notNull: true, default: "'pending'" },
     reviewer_id: {
@@ -349,7 +349,7 @@ exports.up = (pgm) => {
     name: { type: 'text', notNull: true },
     description: { type: 'text' },
     practice_area: { type: 'text' },
-    rules: { type: 'jsonb', notNull: true, default: "'[]'" },
+    rules: { type: 'jsonb', notNull: true, default: pgm.func("'[]'") },
     is_active: { type: 'boolean', notNull: true, default: false },
     created_by: {
       type: 'uuid',
@@ -522,7 +522,7 @@ exports.up = (pgm) => {
     object_id: { type: 'uuid' },
     ip_address: { type: 'inet' },
     user_agent: { type: 'text' },
-    metadata: { type: 'jsonb', notNull: true, default: "'{}'" },
+    metadata: { type: 'jsonb', notNull: true, default: pgm.func("'{}'") },
     created_at: {
       type: 'timestamptz',
       notNull: true,
@@ -549,7 +549,7 @@ exports.up = (pgm) => {
     },
     job_type: { type: 'text', notNull: true },
     status: { type: 'text', notNull: true, default: "'pending'" },
-    payload: { type: 'jsonb', notNull: true, default: "'{}'" },
+    payload: { type: 'jsonb', notNull: true, default: pgm.func("'{}'") },
     result: { type: 'jsonb' },
     attempts: { type: 'integer', notNull: true, default: 0 },
     max_attempts: { type: 'integer', notNull: true, default: 3 },
@@ -593,7 +593,7 @@ exports.up = (pgm) => {
     },
     question: { type: 'text', notNull: true },
     answer: { type: 'text', notNull: true },
-    citations: { type: 'jsonb', notNull: true, default: "'[]'" },
+    citations: { type: 'jsonb', notNull: true, default: pgm.func("'[]'") },
     model_version: { type: 'text' },
     tokens_used: { type: 'integer' },
     response_time_ms: { type: 'integer' },

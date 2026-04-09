@@ -72,7 +72,7 @@ exports.up = (pgm) => {
     },
     reminder_days_before: {
       type: 'integer[]',
-      default: "'{7, 3, 1}'",
+      default: pgm.func("'{7, 3, 1}'"),
     },
     last_reminder_sent_at: { type: 'timestamptz' },
     completed_at: { type: 'timestamptz' },
@@ -82,7 +82,7 @@ exports.up = (pgm) => {
       onDelete: 'SET NULL',
     },
     notes: { type: 'text' },
-    metadata: { type: 'jsonb', default: "'{}'::jsonb" },
+    metadata: { type: 'jsonb', default: pgm.func("'{}'::jsonb") },
     created_at: {
       type: 'timestamptz',
       notNull: true,
@@ -143,7 +143,7 @@ exports.up = (pgm) => {
       type: 'text',
       comment: 'critical_to_high, high_to_medium, medium_to_low, advisory',
     },
-    compliance_citations: { type: 'text[]', default: "'{}'::text[]" },
+    compliance_citations: { type: 'text[]', default: pgm.func("'{}'::text[]") },
     playbook_rule_id: {
       type: 'uuid',
       references: 'playbook_rules',

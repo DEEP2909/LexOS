@@ -89,7 +89,7 @@ exports.up = (pgm) => {
     features_enabled: {
       type: 'jsonb',
       notNull: true,
-      default: "'{\"ocr\": true, \"extraction\": true, \"research\": true, \"suggestions\": true}'::jsonb",
+      default: pgm.func("'{\"ocr\": true, \"extraction\": true, \"research\": true, \"suggestions\": true}'::jsonb"),
     },
     created_at: {
       type: 'timestamptz',

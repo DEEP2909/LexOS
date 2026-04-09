@@ -200,7 +200,7 @@ exports.up = (pgm) => {
     client_secret: { type: 'text' },
     metadata_url: { type: 'text' },
     saml_metadata_xml: { type: 'text' },
-    attribute_mapping: { type: 'jsonb', notNull: true, default: "'{}'" },
+    attribute_mapping: { type: 'jsonb', notNull: true, default: pgm.func("'{}'") },
     is_active: { type: 'boolean', notNull: true, default: false },
     created_at: {
       type: 'timestamptz',
