@@ -299,7 +299,7 @@ def explain_clause_extraction(
         confidence=0.85,
     )
     
-    clause_types = {}
+    clause_types: dict[str, int] = {}
     for clause in clauses:
         ctype = clause.get('type', 'unknown')
         clause_types[ctype] = clause_types.get(ctype, 0) + 1

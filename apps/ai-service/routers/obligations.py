@@ -233,8 +233,8 @@ def extract_obligations_regex(
     parties: Optional[Dict[str, str]]
 ) -> List[ExtractedObligation]:
     """Extract obligations using regex patterns."""
-    obligations = []
-    seen_ranges = set()
+    obligations: list[ExtractedObligation] = []
+    seen_ranges: set[tuple[int, int]] = set()
     
     for obl_type, patterns in OBLIGATION_PATTERNS.items():
         for pattern in patterns:
@@ -352,7 +352,7 @@ No additional prose."""
             if isinstance(obligations_data, dict) and "obligations" in obligations_data:
                 obligations_data = obligations_data["obligations"]
             
-            obligations = []
+            obligations: list[ExtractedObligation] = []
             for i, item in enumerate(obligations_data):
                 source_text = item.get("source_text", "")
                 start = text.find(source_text[:50]) if source_text else 0
@@ -420,7 +420,7 @@ async def extract_obligations(
     logger.info(f"Regex found {len(regex_obligations)} obligations")
     
     # LLM extraction for better accuracy
-    llm_obligations = []
+    llm_obligations: list[ExtractedObligation] = []
     if len(body.text) < 100000:
         llm_obligations = await extract_obligations_llm(
             body.text,
@@ -434,7 +434,7 @@ async def extract_obligations(
     
     # Merge results (prefer LLM)
     if llm_obligations:
-        all_obligations = llm_obligations
+        all_obligations: list[ExtractedObligation] = llm_obligations
         # Add unique regex ones
         llm_ranges = {(o.start_offset // 200, o.end_offset // 200) for o in llm_obligations}
         for obl in regex_obligations:
@@ -449,11 +449,11 @@ async def extract_obligations(
         obl.id = f"obl-{body.document_id[:8]}-{i}"
     
     # Calculate summaries
-    by_type = {}
+    by_type: dict[str, int] = {}
     for obl in all_obligations:
         by_type[obl.type.value] = by_type.get(obl.type.value, 0) + 1
     
-    by_party = {}
+    by_party: dict[str, int] = {}
     for obl in all_obligations:
         by_party[obl.party.value] = by_party.get(obl.party.value, 0) + 1
     

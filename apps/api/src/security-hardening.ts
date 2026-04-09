@@ -287,7 +287,7 @@ const securityHardeningPlugin: FastifyPluginCallback = (fastify, opts, done) => 
     const origin = request.headers.origin;
 
     if (origin && corsConfig.origins.includes(origin)) {
-      // nosemgrep: cors-misconfiguration - origin is allowlisted above
+      // nosemgrep: javascript.express.security.cors-misconfiguration.cors-misconfiguration -- origin is allowlisted above
       reply.header('Access-Control-Allow-Origin', origin);
       reply.header('Access-Control-Allow-Credentials', String(corsConfig.credentials));
       

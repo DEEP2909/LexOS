@@ -431,7 +431,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     const y = (e.clientY - rect.top) / scale;
 
     const content = annotationMode === 'note' || annotationMode === 'comment'
-      ? window.prompt('Enter annotation text:')
+      ? window.prompt('Enter annotation text:') ?? undefined
       : undefined;
 
     if (annotationMode !== 'highlight' && !content) return;
@@ -591,7 +591,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
           <ToolbarButton onClick={handlePrint} title="Print">
             <Printer className="w-4 h-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={onDownload} title="Download">
+          <ToolbarButton onClick={onDownload ?? (() => window.open(fileUrl, '_blank'))} title="Download">
             <Download className="w-4 h-4" />
           </ToolbarButton>
         </div>

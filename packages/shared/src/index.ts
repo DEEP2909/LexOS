@@ -491,6 +491,7 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken?: string;
   mfaRequired?: boolean;
+  mfaSessionToken?: string;
   attorney: Omit<Attorney, 'passwordHash'>;
 }
 

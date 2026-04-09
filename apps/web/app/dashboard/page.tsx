@@ -51,8 +51,8 @@ export default function DashboardPage() {
 
   // Fetch dashboard data
   const { data: mattersData } = useQuery({
-    queryKey: ["matters", { status: "active", limit: 5 }],
-    queryFn: () => matters.list({ status: "active", limit: 5 }),
+    queryKey: ["matters", { status: "open", limit: 5 }],
+    queryFn: () => matters.list({ status: "open", limit: 5 }),
     enabled: isAuthenticated,
   });
 
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name || "Attorney"}</p>
+                <p className="text-sm font-medium truncate">{user?.displayName || "Attorney"}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
               <button
@@ -183,9 +183,9 @@ export default function DashboardPage() {
           <div className="flex h-full items-center justify-between px-6">
             <div>
               <h1 className="text-xl font-semibold">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">
-                Welcome back, {user?.name?.split(" ")[0] || "Counselor"}
-              </p>
+                <p className="text-sm text-muted-foreground">
+                  Welcome back, {user?.displayName?.split(" ")[0] || "Counselor"}
+                </p>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -247,7 +247,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mattersData?.items?.map((matter, index) => (
+                  {mattersData?.data?.map((matter, index) => (
                     <motion.div
                       key={matter.id}
                       initial={{ opacity: 0, x: -20 }}
@@ -263,12 +263,12 @@ export default function DashboardPage() {
                             <FolderOpen className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium">{matter.name}</p>
+                            <p className="font-medium">{matter.matterName}</p>
                             <p className="text-sm text-muted-foreground">{matter.clientName}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge variant={matter.status === "active" ? "active" : "secondary"}>
+                          <Badge variant={matter.status === "open" ? "active" : "secondary"}>
                             {matter.status}
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                       </Link>
                     </motion.div>
                   ))}
-                  {!mattersData?.items?.length && (
+                  {!mattersData?.data?.length && (
                     <div className="text-center py-8 text-muted-foreground">
                       <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No active matters</p>

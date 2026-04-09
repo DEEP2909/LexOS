@@ -46,7 +46,7 @@ export function AuthGuard({
     // Check role requirements
     if (requiredRoles.length > 0 && user) {
       const hasRequiredRole = requiredRoles.some(role => 
-        user.roles?.includes(role)
+        role === user.role
       );
       
       if (!hasRequiredRole) {
@@ -72,7 +72,7 @@ export function AuthGuard({
   // Check roles if required
   if (requiredRoles.length > 0 && user) {
     const hasRequiredRole = requiredRoles.some(role => 
-      user.roles?.includes(role)
+      role === user.role
     );
     
     if (!hasRequiredRole) {

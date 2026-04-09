@@ -120,12 +120,14 @@ const Comment = Mark.create({
 // TYPES
 // ============================================================================
 
-interface Suggestion {
+export interface Suggestion {
   id: string;
   type: 'insertion' | 'deletion' | 'replacement';
   originalText?: string;
   suggestedText?: string;
   reason: string;
+  rationale?: string;
+  confidence?: number;
   clauseType?: string;
   riskLevel?: 'low' | 'medium' | 'high' | 'critical';
   position: { from: number; to: number };

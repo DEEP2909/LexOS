@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AiDisclaimer } from "@/components/shared/AiDisclaimer";
+import type { Suggestion } from "@/components/RedlineEditor";
 
 // Dynamic imports for heavy components
 const PDFViewer = dynamic(() => import("@/components/PDFViewer"), {
@@ -73,14 +74,17 @@ interface Clause {
   status: "pending" | "approved" | "rejected" | "modified";
 }
 
-interface Suggestion {
-  id: string;
-  clauseId: string;
-  originalText: string;
-  suggestedText: string;
-  rationale: string;
-  confidence: number;
-  status: "pending" | "accepted" | "rejected";
+interface RawSuggestion {
+  id?: string;
+  clauseId?: string;
+  originalText?: string;
+  suggestedText?: string;
+  rationale?: string;
+  reason?: string;
+  confidence?: number;
+  status?: "pending" | "accepted" | "rejected";
+  clauseType?: string;
+  riskLevel?: "low" | "medium" | "high" | "critical";
 }
 
 export default function DocumentDetailPage() {
@@ -125,7 +129,22 @@ export default function DocumentDetailPage() {
 
         if (suggestionsRes.ok) {
           const suggestionsData = await suggestionsRes.json();
-          setSuggestions(suggestionsData.data || []);
+          const normalizedSuggestions: Suggestion[] = (suggestionsData.data || []).map(
+            (suggestion: RawSuggestion, index: number) => ({
+              id: suggestion.id || `suggestion-${index}`,
+              type: "replacement",
+              originalText: suggestion.originalText || "",
+              suggestedText: suggestion.suggestedText || "",
+              reason: suggestion.reason || suggestion.rationale || "AI suggestion",
+              rationale: suggestion.rationale || suggestion.reason,
+              confidence: suggestion.confidence || 0,
+              clauseType: suggestion.clauseType,
+              riskLevel: suggestion.riskLevel,
+              position: { from: 0, to: 0 },
+              status: suggestion.status || "pending",
+            })
+          );
+          setSuggestions(normalizedSuggestions);
         }
       } catch (err) {
         console.error("Failed to fetch document:", err);
@@ -356,10 +375,9 @@ export default function DocumentDetailPage() {
               <CardContent className="p-0 h-[calc(100%-60px)] overflow-auto">
                 {document?.pdfUrl ? (
                   <PDFViewer
-                    url={document.pdfUrl}
-                    page={currentPage}
-                    scale={zoom / 100}
-                    highlightClause={selectedClause}
+                    fileUrl={document.pdfUrl}
+                    fileName={document.name || "document"}
+                    readOnly={false}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
@@ -385,11 +403,19 @@ export default function DocumentDetailPage() {
               </CardHeader>
               <CardContent className="p-0 h-[calc(100%-60px)] overflow-hidden">
                 <RedlineEditor
-                  content={editorContent}
-                  onChange={setEditorContent}
+                  documentId={docId}
+                  initialContent={editorContent}
                   suggestions={suggestions.filter((s) => s.status === "pending")}
-                  onAcceptSuggestion={handleAcceptSuggestion}
-                  onRejectSuggestion={handleRejectSuggestion}
+                  onSave={async (content) => {
+                    setEditorContent(content);
+                  }}
+                  onSuggestionAction={async (suggestionId, action) => {
+                    if (action === "accept") {
+                      await handleAcceptSuggestion(suggestionId);
+                    } else {
+                      await handleRejectSuggestion(suggestionId);
+                    }
+                  }}
                 />
               </CardContent>
             </Card>
@@ -417,7 +443,7 @@ export default function DocumentDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline">
-                            {Math.round(suggestion.confidence * 100)}% confidence
+                            {Math.round((suggestion.confidence ?? 0) * 100)}% confidence
                           </Badge>
                         </div>
                         <div className="grid gap-2">
@@ -442,7 +468,7 @@ export default function DocumentDetailPage() {
                               Rationale:
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {suggestion.rationale}
+                              {suggestion.rationale || suggestion.reason}
                             </p>
                           </div>
                         </div>

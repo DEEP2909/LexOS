@@ -111,7 +111,7 @@ class Evaluator:
         failed = 0
         failures = []
         
-        total_latency = 0
+        total_latency = 0.0
         total_tokens = 0
         
         true_positives = 0
@@ -234,8 +234,10 @@ class Evaluator:
         actual: Dict[str, Any],
     ) -> tuple:
         """Evaluate risk assessment results"""
-        expected_level = expected.get("risk_level", "").lower()
-        actual_level = actual.get("risk_level", "").lower()
+        expected_level_raw = expected.get("risk_level", "")
+        actual_level_raw = actual.get("risk_level", "")
+        expected_level = expected_level_raw.lower() if isinstance(expected_level_raw, str) else ""
+        actual_level = actual_level_raw.lower() if isinstance(actual_level_raw, str) else ""
         
         # Map to numeric for comparison
         level_map = {"low": 1, "medium": 2, "high": 3, "critical": 4}
@@ -262,16 +264,23 @@ class Evaluator:
     ) -> tuple:
         """Evaluate research results"""
         # Check if key citations are present
-        expected_citations = set(expected.get("citations", []))
-        actual_citations = set(actual.get("citations", []))
+        expected_citations = {
+            citation for citation in expected.get("citations", []) if isinstance(citation, str)
+        }
+        actual_citations = {
+            citation for citation in actual.get("citations", []) if isinstance(citation, str)
+        }
         
         tp = len(expected_citations & actual_citations)
         fp = len(actual_citations - expected_citations)
         fn = len(expected_citations - actual_citations)
         
         # Check answer quality (simple keyword matching)
-        expected_keywords = set(expected.get("keywords", []))
-        actual_text = actual.get("answer", "").lower()
+        expected_keywords = {
+            keyword for keyword in expected.get("keywords", []) if isinstance(keyword, str)
+        }
+        answer = actual.get("answer", "")
+        actual_text = answer.lower() if isinstance(answer, str) else ""
         
         keyword_matches = sum(1 for k in expected_keywords if k.lower() in actual_text)
         keyword_ratio = keyword_matches / len(expected_keywords) if expected_keywords else 1.0

@@ -36,8 +36,11 @@
     "@tanstack/react-query": "^5.56.2",
     "@tanstack/react-table": "^8.20.5",
     "@tiptap/extension-highlight": "^2.7.1",
+    "@tiptap/extension-character-count": "^2.9.1",
+    "@tiptap/extension-placeholder": "^2.9.1",
     "@tiptap/extension-task-item": "^2.7.1",
     "@tiptap/extension-task-list": "^2.7.1",
+    "@tiptap/extension-text-align": "^2.9.1",
     "@tiptap/extension-underline": "^2.7.1",
     "@tiptap/pm": "^2.7.1",
     "@tiptap/react": "^2.7.1",
@@ -64,14 +67,21 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
     "@playwright/test": "^1.48.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.16.5",
     "@types/react": "^18.3.8",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "@vitest/coverage-v8": "^2.1.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.13",
+    "jsdom": "^25.0.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.12",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.1"
   }
 }

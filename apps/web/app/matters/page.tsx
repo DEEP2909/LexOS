@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { matters, CreateMatterInput } from "@/lib/api";
+import { matters, type CreateMatterInput } from "@/lib/api";
 import { formatDate, US_STATES } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,10 +68,13 @@ export default function MattersPage() {
   // Fetch matters
   const { data: mattersData, isLoading } = useQuery({
     queryKey: ["matters", { search: searchQuery, status: statusFilter === "all" ? undefined : statusFilter }],
-    queryFn: () =>
+      queryFn: () =>
       matters.list({
         search: searchQuery || undefined,
-        status: statusFilter === "all" ? undefined : (statusFilter as "active" | "closed" | "on_hold"),
+        status:
+          statusFilter === "all"
+            ? undefined
+            : (statusFilter as "open" | "under_review" | "closed" | "archived"),
       }),
   });
 
@@ -254,7 +257,7 @@ export default function MattersPage() {
             />
           </div>
           <div className="flex gap-2">
-            {["all", "active", "closed", "on_hold"].map((status) => (
+            {["all", "open", "under_review", "closed", "archived"].map((status) => (
               <Button
                 key={status}
                 variant={statusFilter === status ? "default" : "outline"}
@@ -272,10 +275,10 @@ export default function MattersPage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : mattersData?.items?.length ? (
+        ) : mattersData?.data?.length ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence>
-              {mattersData.items.map((matter, index) => (
+              {mattersData.data.map((matter, index) => (
                 <motion.div
                   key={matter.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -291,15 +294,15 @@ export default function MattersPage() {
                           onClick={() => router.push(`/matters/${matter.id}`)}
                         >
                           <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                            {matter.name}
+                            {matter.matterName}
                           </CardTitle>
                           <CardDescription>{matter.clientName}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant={
-                              matter.status === "active"
-                                ? "active"
+                               matter.status === "open"
+                                 ? "active"
                                 : matter.status === "closed"
                                 ? "secondary"
                                 : "pending"
@@ -323,20 +326,20 @@ export default function MattersPage() {
                       </div>
                     </CardHeader>
                     <CardContent onClick={() => router.push(`/matters/${matter.id}`)}>
-                      {matter.description && (
+                      {matter.notes && (
                         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                          {matter.description}
+                          {matter.notes}
                         </p>
                       )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        {matter.practiceArea && (
+                        {matter.matterType && (
                           <span className="flex items-center gap-1">
                             <Scale className="h-3 w-3" />
-                            {matter.practiceArea}
+                            {matter.matterType}
                           </span>
                         )}
-                        {matter.jurisdiction && (
-                          <span>{matter.jurisdiction}</span>
+                        {matter.governingLawState && (
+                          <span>{matter.governingLawState}</span>
                         )}
                       </div>
                       <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
@@ -370,9 +373,9 @@ export default function MattersPage() {
         )}
 
         {/* Pagination info */}
-        {mattersData?.total && mattersData.total > 0 && (
+        {mattersData?.pagination?.total && mattersData.pagination.total > 0 && (
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Showing {mattersData.items?.length || 0} of {mattersData.total} matters
+            Showing {mattersData.data?.length || 0} of {mattersData.pagination.total} matters
           </div>
         )}
       </main>

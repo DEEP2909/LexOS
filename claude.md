@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-08, Session 12)
+## Claude Context File (Updated: 2026-04-09, Session 13)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 12)
+## Project Status: ✅ CORE ISSUES FIXED (Round 13)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -13,6 +13,40 @@
 - **Migrations**: 12 database migration files
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
+
+## Latest Fixes (2026-04-09 Session 13)
+### Updated `issues.md` full remediation closure:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | Web build/typecheck failing due missing shadcn wrappers and data-model drift | ✅ Added 10 missing `apps/web/components/ui/*` wrappers and aligned dashboard/matters/doc detail pages to shared contracts (`PaginatedResponse.data`, `pagination.total`, `matterName`, `governingLawState`, valid statuses) |
+| #2 | Major | `docId` document page had PDF/Redline prop contract mismatches | ✅ Updated `PDFViewer` and `RedlineEditor` integration to expected props and normalized AI suggestion payload typing |
+| #3 | Major | `security-scan` still blocked on incomplete Semgrep nosemgrep rule id | ✅ Updated CORS suppression comment to full rule id `javascript.express.security.cors-misconfiguration.cors-misconfiguration` |
+| #4 | Major | AI service mypy failures in 6 files | ✅ Applied explicit typing/nullability fixes in explainability, scoring, evaluator, llm_safety, obligations router, and embed router |
+| #5 | Major | Web test scaffolding missing modern Vitest setup/deps | ✅ Added Vitest config/setup, refreshed component test file imports, and installed requested test/tiptap dependencies |
+
+### Files Modified (Session 13):
+- `apps/web/components/ui/{progress,separator,checkbox,switch,tabs,dropdown-menu,select,scroll-area,table,alert}.tsx` (new)
+- `apps/web/app/dashboard/page.tsx`
+- `apps/web/app/matters/page.tsx`
+- `apps/web/app/matters/[id]/page.tsx`
+- `apps/web/app/matters/[id]/documents/[docId]/page.tsx`
+- `apps/web/components/PDFViewer.tsx`
+- `apps/web/components/RedlineEditor.tsx`
+- `apps/web/components/auth/AuthGuard.tsx`
+- `apps/web/lib/api.ts`
+- `apps/web/package.json`
+- `apps/web/vitest.config.ts` (new)
+- `apps/web/tests/setup.ts` (new)
+- `apps/web/tests/components.test.tsx`
+- `packages/shared/src/index.ts`
+- `apps/api/src/security-hardening.ts`
+- `apps/ai-service/explainability.py`
+- `apps/ai-service/evaluation/scoring.py`
+- `apps/ai-service/evaluation/evaluator.py`
+- `apps/ai-service/llm_safety.py`
+- `apps/ai-service/routers/obligations.py`
+- `apps/ai-service/routers/embed.py`
 
 ## Latest Fixes (2026-04-08 Session 12)
 ### Follow-up CI/Lint Stabilization:

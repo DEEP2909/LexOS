@@ -31,7 +31,7 @@ import {
 import { toast } from "sonner";
 
 import { matters, documents, clauses, flags, obligations } from "@/lib/api";
-import { formatDate, formatFileSize, getRiskColor, CLAUSE_TYPE_LABELS } from "@/lib/utils";
+import { formatDate, getRiskColor, CLAUSE_TYPE_LABELS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -175,6 +175,17 @@ export default function MatterDetailPage() {
     { id: "analytics", label: "Analytics", icon: BarChart3 },
   ];
 
+  const totalDocuments = analytics?.totalDocuments ?? 0;
+  const totalClauses = analytics?.totalClauses ?? 0;
+  const processingQueue = analytics?.processingQueue ?? 0;
+  const processedDocuments = Math.max(totalDocuments - processingQueue, 0);
+  const flagsByRisk = analytics?.flagsByRisk ?? {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -188,15 +199,15 @@ export default function MatterDetailPage() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold">{matter.name}</h1>
-                <Badge variant={matter.status === "active" ? "active" : "secondary"}>
+                <h1 className="text-2xl font-semibold">{matter.matterName}</h1>
+                <Badge variant={matter.status === "open" ? "active" : "secondary"}>
                   {matter.status}
                 </Badge>
               </div>
               <p className="text-muted-foreground">
                 {matter.clientName}
-                {matter.jurisdiction && ` • ${matter.jurisdiction}`}
-                {matter.practiceArea && ` • ${matter.practiceArea}`}
+                {matter.governingLawState && ` • ${matter.governingLawState}`}
+                {matter.matterType && ` • ${matter.matterType}`}
               </p>
             </div>
           </div>
@@ -204,27 +215,27 @@ export default function MatterDetailPage() {
           {/* Stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{analytics?.totalDocuments || 0}</p>
+              <p className="text-2xl font-bold">{totalDocuments}</p>
               <p className="text-xs text-muted-foreground">Documents</p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{analytics?.totalClauses || 0}</p>
+              <p className="text-2xl font-bold">{totalClauses}</p>
               <p className="text-xs text-muted-foreground">Clauses</p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold text-red-500">
-                  {(analytics?.flagsByRisk?.critical || 0) + (analytics?.flagsByRisk?.high || 0)}
+                  {flagsByRisk.critical + flagsByRisk.high}
                 </span>
                 <span className="text-lg text-muted-foreground">/</span>
                 <span className="text-lg text-muted-foreground">
-                  {Object.values(analytics?.flagsByRisk || {}).reduce((a, b) => a + b, 0)}
+                  {Object.values(flagsByRisk).reduce((a, b) => a + b, 0)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">Critical/High Flags</p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold">{analytics?.processingQueue || 0}</p>
+              <p className="text-2xl font-bold">{processingQueue}</p>
               <p className="text-xs text-muted-foreground">Processing</p>
             </div>
           </div>
@@ -284,7 +295,7 @@ export default function MatterDetailPage() {
 
             {/* Documents List */}
             <div className="space-y-3">
-              {documentsData?.items?.map((doc) => (
+              {documentsData?.data?.map((doc) => (
                 <motion.div
                   key={doc.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -293,26 +304,34 @@ export default function MatterDetailPage() {
                 >
                   <FileText className="h-10 w-10 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{doc.filename}</p>
+                    <p className="font-medium truncate">{doc.sourceName}</p>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{formatFileSize(doc.sizeBytes)}</span>
+                      <span>
+                        {doc.pageCount ? `${doc.pageCount} page(s)` : doc.docType}
+                      </span>
                       <span>{formatDate(doc.createdAt)}</span>
                     </div>
                   </div>
                   <Badge
                     variant={
-                      doc.status === "ready"
+                      doc.ingestionStatus === "normalized"
                         ? "completed"
-                        : doc.status === "processing"
+                        : doc.ingestionStatus === "processing" ||
+                            doc.ingestionStatus === "scanning"
                         ? "processing"
-                        : doc.status === "failed"
+                        : doc.ingestionStatus === "failed"
                         ? "failed"
                         : "pending"
                     }
                   >
-                    {doc.status === "ready" && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {doc.status === "processing" && <RefreshCw className="h-3 w-3 mr-1 animate-spin" />}
-                    {doc.status}
+                    {doc.ingestionStatus === "normalized" && (
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                    )}
+                    {(doc.ingestionStatus === "processing" ||
+                      doc.ingestionStatus === "scanning") && (
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    )}
+                    {doc.ingestionStatus}
                   </Badge>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon">
@@ -324,7 +343,7 @@ export default function MatterDetailPage() {
                   </div>
                 </motion.div>
               ))}
-              {!documentsData?.items?.length && (
+              {!documentsData?.data?.length && (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No documents yet. Upload your first document above.</p>
@@ -338,7 +357,7 @@ export default function MatterDetailPage() {
         {activeTab === "clauses" && (
           <div className="space-y-4">
             <AiDisclaimer variant="default" className="mb-4" />
-            {clausesData?.items?.map((clause) => (
+            {clausesData?.data?.map((clause) => (
               <Card key={clause.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -350,12 +369,12 @@ export default function MatterDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <AiGeneratedContent disclaimerVariant="compact">
-                    <p className="text-sm whitespace-pre-wrap">{clause.text}</p>
+                    <p className="text-sm whitespace-pre-wrap">{clause.textExcerpt}</p>
                   </AiGeneratedContent>
                 </CardContent>
               </Card>
             ))}
-            {!clausesData?.items?.length && (
+            {!clausesData?.data?.length && (
               <div className="text-center py-12 text-muted-foreground">
                 <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No clauses extracted yet. Upload documents to analyze.</p>
@@ -368,28 +387,44 @@ export default function MatterDetailPage() {
         {activeTab === "flags" && (
           <div className="space-y-4">
             <AiDisclaimer variant="default" className="mb-4" />
-            {flagsData?.items?.map((flag) => (
+            {flagsData?.data?.map((flag) => (
               <Card key={flag.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <div
                       className="h-3 w-3 rounded-full mt-1.5"
-                      style={{ backgroundColor: getRiskColor(flag.riskLevel) }}
+                      style={{
+                        backgroundColor: getRiskColor(
+                          flag.severity === "critical"
+                            ? "critical"
+                            : flag.severity === "warn"
+                            ? "medium"
+                            : "low"
+                        ),
+                      }}
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={flag.riskLevel as "critical" | "high" | "medium" | "low"}>
-                          {flag.riskLevel}
+                        <Badge
+                          variant={
+                            flag.severity === "critical"
+                              ? "critical"
+                              : flag.severity === "warn"
+                              ? "medium"
+                              : "low"
+                          }
+                        >
+                          {flag.severity}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {CLAUSE_TYPE_LABELS[flag.clauseType] || flag.clauseType}
+                          {flag.flagType}
                         </span>
                       </div>
-                      <p className="font-medium">{flag.message}</p>
-                      {flag.suggestedEdit && (
+                      <p className="font-medium">{flag.reason}</p>
+                      {flag.recommendedFix && (
                         <AiGeneratedContent disclaimerVariant="inline" className="mt-2">
                           <p className="text-sm text-muted-foreground">
-                            Suggestion: {flag.suggestedEdit}
+                            Suggestion: {flag.recommendedFix}
                           </p>
                         </AiGeneratedContent>
                       )}
@@ -414,7 +449,7 @@ export default function MatterDetailPage() {
                 </CardContent>
               </Card>
             ))}
-            {!flagsData?.items?.length && (
+            {!flagsData?.data?.length && (
               <div className="text-center py-12 text-muted-foreground">
                 <Flag className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No flags generated yet.</p>
@@ -426,20 +461,23 @@ export default function MatterDetailPage() {
         {/* Obligations Tab */}
         {activeTab === "obligations" && (
           <div className="space-y-4">
-            {obligationsData?.items?.map((obligation) => (
+            {obligationsData?.data?.map((obligation) => (
               <Card key={obligation.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge>{obligation.type}</Badge>
+                        <Badge>{obligation.obligationType}</Badge>
                         <Badge variant="outline">{obligation.party}</Badge>
                       </div>
                       <p className="font-medium">{obligation.description}</p>
-                      {obligation.deadline && (
+                      {(obligation.deadlineDate || obligation.deadlineText) && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          Deadline: {obligation.deadline}
+                          Deadline:{" "}
+                          {obligation.deadlineDate
+                            ? formatDate(obligation.deadlineDate)
+                            : obligation.deadlineText}
                         </p>
                       )}
                     </div>
@@ -450,7 +488,7 @@ export default function MatterDetailPage() {
                 </CardContent>
               </Card>
             ))}
-            {!obligationsData?.items?.length && (
+            {!obligationsData?.data?.length && (
               <div className="text-center py-12 text-muted-foreground">
                 <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No obligations extracted yet.</p>
@@ -509,24 +547,24 @@ export default function MatterDetailPage() {
                     </div>
 
                     {/* Documents uploaded summary */}
-                    {analytics?.totalDocuments > 0 && (
+                    {totalDocuments > 0 && (
                       <div className="flex gap-4 items-start border-l-2 border-blue-500 pl-4">
                         <div className="flex-1">
-                          <p className="font-medium">{analytics.totalDocuments} document(s) uploaded</p>
+                          <p className="font-medium">{totalDocuments} document(s) uploaded</p>
                           <p className="text-sm text-muted-foreground">
-                            {analytics.processedDocuments || 0} processed
+                            {processedDocuments} processed
                           </p>
                         </div>
                       </div>
                     )}
 
                     {/* Risk flags summary */}
-                    {(analytics?.flagsByRisk?.critical > 0 || analytics?.flagsByRisk?.high > 0) && (
+                    {(flagsByRisk.critical > 0 || flagsByRisk.high > 0) && (
                       <div className="flex gap-4 items-start border-l-2 border-red-500 pl-4">
                         <div className="flex-1">
                           <p className="font-medium">Risk flags identified</p>
                           <p className="text-sm text-muted-foreground">
-                            {analytics.flagsByRisk.critical || 0} critical, {analytics.flagsByRisk.high || 0} high priority
+                            {flagsByRisk.critical} critical, {flagsByRisk.high} high priority
                           </p>
                         </div>
                       </div>
@@ -567,7 +605,7 @@ export default function MatterDetailPage() {
                     ))}
 
                     {/* Empty state */}
-                    {!timelineData?.obligations?.length && !analytics?.totalDocuments && (
+                    {!timelineData?.obligations?.length && totalDocuments === 0 && (
                       <div className="text-center py-8 text-muted-foreground">
                         <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>No timeline events yet. Upload documents to get started.</p>
@@ -589,9 +627,9 @@ export default function MatterDetailPage() {
                   <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{analytics?.totalDocuments || 0}</div>
+                  <div className="text-2xl font-bold">{totalDocuments}</div>
                   <p className="text-xs text-muted-foreground">
-                    {analytics?.processedDocuments || 0} processed
+                    {processedDocuments} processed
                   </p>
                 </CardContent>
               </Card>
@@ -600,7 +638,7 @@ export default function MatterDetailPage() {
                   <CardTitle className="text-sm font-medium">Clauses Extracted</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{analytics?.totalClauses || 0}</div>
+                  <div className="text-2xl font-bold">{totalClauses}</div>
                   <p className="text-xs text-muted-foreground">
                     Across all documents
                   </p>
@@ -612,13 +650,10 @@ export default function MatterDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-amber-600">
-                    {(analytics?.flagsByRisk?.critical || 0) + 
-                     (analytics?.flagsByRisk?.high || 0) + 
-                     (analytics?.flagsByRisk?.medium || 0) + 
-                     (analytics?.flagsByRisk?.low || 0)}
+                    {flagsByRisk.critical + flagsByRisk.high + flagsByRisk.medium + flagsByRisk.low}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {analytics?.flagsByRisk?.critical || 0} critical
+                    {flagsByRisk.critical} critical
                   </p>
                 </CardContent>
               </Card>
@@ -627,7 +662,7 @@ export default function MatterDetailPage() {
                   <CardTitle className="text-sm font-medium">Processing Queue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{analytics?.processingQueue || 0}</div>
+                  <div className="text-2xl font-bold">{processingQueue}</div>
                   <p className="text-xs text-muted-foreground">
                     Documents pending
                   </p>
@@ -651,10 +686,10 @@ export default function MatterDetailPage() {
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-red-600 rounded-full" 
-                        style={{ width: `${Math.min(100, (analytics?.flagsByRisk?.critical || 0) * 10)}%` }}
+                        style={{ width: `${Math.min(100, flagsByRisk.critical * 10)}%` }}
                       />
                     </div>
-                    <span className="w-8 text-sm text-right">{analytics?.flagsByRisk?.critical || 0}</span>
+                    <span className="w-8 text-sm text-right">{flagsByRisk.critical}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-orange-500" />
@@ -662,10 +697,10 @@ export default function MatterDetailPage() {
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-orange-500 rounded-full" 
-                        style={{ width: `${Math.min(100, (analytics?.flagsByRisk?.high || 0) * 10)}%` }}
+                        style={{ width: `${Math.min(100, flagsByRisk.high * 10)}%` }}
                       />
                     </div>
-                    <span className="w-8 text-sm text-right">{analytics?.flagsByRisk?.high || 0}</span>
+                    <span className="w-8 text-sm text-right">{flagsByRisk.high}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -673,10 +708,10 @@ export default function MatterDetailPage() {
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-amber-500 rounded-full" 
-                        style={{ width: `${Math.min(100, (analytics?.flagsByRisk?.medium || 0) * 10)}%` }}
+                        style={{ width: `${Math.min(100, flagsByRisk.medium * 10)}%` }}
                       />
                     </div>
-                    <span className="w-8 text-sm text-right">{analytics?.flagsByRisk?.medium || 0}</span>
+                    <span className="w-8 text-sm text-right">{flagsByRisk.medium}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -684,10 +719,10 @@ export default function MatterDetailPage() {
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-green-500 rounded-full" 
-                        style={{ width: `${Math.min(100, (analytics?.flagsByRisk?.low || 0) * 10)}%` }}
+                        style={{ width: `${Math.min(100, flagsByRisk.low * 10)}%` }}
                       />
                     </div>
-                    <span className="w-8 text-sm text-right">{analytics?.flagsByRisk?.low || 0}</span>
+                    <span className="w-8 text-sm text-right">{flagsByRisk.low}</span>
                   </div>
                 </div>
               </CardContent>

@@ -214,7 +214,7 @@ export const auth = {
 // ============================================================================
 
 export interface MatterFilters {
-  status?: "active" | "closed" | "on_hold";
+  status?: "open" | "under_review" | "closed" | "archived";
   search?: string;
   page?: number;
   limit?: number;

@@ -4,7 +4,7 @@ Text embedding generation endpoints.
 """
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -68,7 +68,7 @@ async def create_embeddings(
     if len(body.texts) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 texts per request")
     
-    embeddings_list = []
+    embeddings_list: list[list[float]] = []
     
     async def generate_embeddings():
         nonlocal embeddings_list
@@ -82,7 +82,7 @@ async def create_embeddings(
         embeddings_list = embeddings.tolist()
     
     try:
-        await retry_with_backoff(generate_embeddings, EMBED_RETRY_CONFIG)
+        await retry_with_backoff(generate_embeddings, config=EMBED_RETRY_CONFIG)
         
         return EmbedResponse(
             embeddings=embeddings_list,
@@ -112,7 +112,7 @@ async def create_single_embedding(
     if not body.text:
         raise HTTPException(status_code=400, detail="No text provided")
     
-    embedding_result = None
+    embedding_result: Optional[list[float]] = None
     
     async def generate_single_embedding():
         nonlocal embedding_result
@@ -125,7 +125,9 @@ async def create_single_embedding(
         embedding_result = embedding.tolist()
     
     try:
-        await retry_with_backoff(generate_single_embedding, EMBED_RETRY_CONFIG)
+        await retry_with_backoff(generate_single_embedding, config=EMBED_RETRY_CONFIG)
+        if embedding_result is None:
+            raise HTTPException(status_code=500, detail="Embedding generation returned no result")
         
         return SingleEmbedResponse(
             embedding=embedding_result,

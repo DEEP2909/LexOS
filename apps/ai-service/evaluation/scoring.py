@@ -63,8 +63,16 @@ def calculate_clause_accuracy(
         return {"overall": 1.0 if not actual_clauses else 0.0}
     
     # Type accuracy
-    expected_types = {c.get("type") for c in expected_clauses}
-    actual_types = {c.get("type") for c in actual_clauses}
+    expected_types = {
+        clause_type
+        for clause in expected_clauses
+        if isinstance((clause_type := clause.get("type")), str)
+    }
+    actual_types = {
+        clause_type
+        for clause in actual_clauses
+        if isinstance((clause_type := clause.get("type")), str)
+    }
     type_result = calculate_precision_recall(expected_types, actual_types)
     
     # Boundary accuracy (using overlap ratio)
@@ -133,8 +141,10 @@ def calculate_risk_accuracy(
     # Level mapping
     level_map = {"low": 1, "medium": 2, "high": 3, "critical": 4}
     
-    exp_level = expected.get("risk_level", "").lower()
-    act_level = actual.get("risk_level", "").lower()
+    exp_level_raw = expected.get("risk_level", "")
+    act_level_raw = actual.get("risk_level", "")
+    exp_level = exp_level_raw.lower() if isinstance(exp_level_raw, str) else ""
+    act_level = act_level_raw.lower() if isinstance(act_level_raw, str) else ""
     
     exp_num = level_map.get(exp_level, 0)
     act_num = level_map.get(act_level, 0)
@@ -146,14 +156,24 @@ def calculate_risk_accuracy(
         level_correct = abs(exp_num - act_num) <= 1
     
     # Score accuracy (if provided)
-    exp_score = expected.get("risk_score", 0.5)
-    act_score = actual.get("risk_score", 0.5)
+    exp_score_raw = expected.get("risk_score", 0.5)
+    act_score_raw = actual.get("risk_score", 0.5)
+    exp_score = float(exp_score_raw) if isinstance(exp_score_raw, (int, float)) else 0.5
+    act_score = float(act_score_raw) if isinstance(act_score_raw, (int, float)) else 0.5
     score_error = abs(exp_score - act_score)
     score_accuracy = max(0, 1 - score_error)
     
     # Factor accuracy
-    exp_factors = {f.get("category") for f in expected.get("factors", [])}
-    act_factors = {f.get("category") for f in actual.get("factors", [])}
+    exp_factors = {
+        category
+        for factor in expected.get("factors", [])
+        if isinstance(factor, dict) and isinstance((category := factor.get("category")), str)
+    }
+    act_factors = {
+        category
+        for factor in actual.get("factors", [])
+        if isinstance(factor, dict) and isinstance((category := factor.get("category")), str)
+    }
     factor_result = calculate_precision_recall(exp_factors, act_factors)
     
     # Overall (weighted)
@@ -188,28 +208,32 @@ def calculate_research_quality(
         Dictionary with quality metrics
     """
     # Citation accuracy
-    exp_citations = set(expected.get("citations", []))
-    act_citations = set(actual.get("citations", []))
+    exp_citations = {citation for citation in expected.get("citations", []) if isinstance(citation, str)}
+    act_citations = {citation for citation in actual.get("citations", []) if isinstance(citation, str)}
     citation_result = calculate_precision_recall(exp_citations, act_citations)
     
     # Keyword coverage
-    exp_keywords = set(k.lower() for k in expected.get("keywords", []))
-    act_text = actual.get("answer", "").lower()
+    exp_keywords = {
+        keyword.lower() for keyword in expected.get("keywords", []) if isinstance(keyword, str)
+    }
+    act_answer = actual.get("answer", "")
+    act_text = act_answer.lower() if isinstance(act_answer, str) else ""
     
     keywords_found = sum(1 for k in exp_keywords if k in act_text)
     keyword_coverage = keywords_found / len(exp_keywords) if exp_keywords else 1.0
     
     # Factual accuracy (if key facts provided)
-    exp_facts = expected.get("key_facts", [])
+    exp_facts = [fact for fact in expected.get("key_facts", []) if isinstance(fact, str)]
     fact_accuracy = 1.0  # Default to perfect if no facts to check
     
     if exp_facts:
-        facts_found = sum(1 for f in exp_facts if f.lower() in act_text)
+        facts_found = sum(1 for fact in exp_facts if fact.lower() in act_text)
         fact_accuracy = facts_found / len(exp_facts)
     
     # Answer length appropriateness
-    exp_length = expected.get("expected_length", 500)
-    act_length = len(actual.get("answer", ""))
+    exp_length_raw = expected.get("expected_length", 500)
+    exp_length = float(exp_length_raw) if isinstance(exp_length_raw, (int, float)) else 500.0
+    act_length = len(act_answer) if isinstance(act_answer, str) else 0
     
     # Penalize if too short or too long
     length_ratio = act_length / exp_length if exp_length > 0 else 1.0
@@ -255,8 +279,16 @@ def calculate_obligation_accuracy(
         return {"overall": 1.0 if not actual_obligations else 0.0}
     
     # Type accuracy
-    exp_types = {o.get("type") for o in expected_obligations}
-    act_types = {o.get("type") for o in actual_obligations}
+    exp_types = {
+        obligation_type
+        for obligation in expected_obligations
+        if isinstance((obligation_type := obligation.get("type")), str)
+    }
+    act_types = {
+        obligation_type
+        for obligation in actual_obligations
+        if isinstance((obligation_type := obligation.get("type")), str)
+    }
     type_result = calculate_precision_recall(exp_types, act_types)
     
     # Date extraction accuracy
@@ -274,8 +306,16 @@ def calculate_obligation_accuracy(
     date_accuracy = date_matches / len([o for o in expected_obligations if o.get("due_date")]) if expected_obligations else 1.0
     
     # Party accuracy
-    exp_parties = {o.get("responsible_party") for o in expected_obligations if o.get("responsible_party")}
-    act_parties = {o.get("responsible_party") for o in actual_obligations if o.get("responsible_party")}
+    exp_parties = {
+        party
+        for obligation in expected_obligations
+        if isinstance((party := obligation.get("responsible_party")), str) and party
+    }
+    act_parties = {
+        party
+        for obligation in actual_obligations
+        if isinstance((party := obligation.get("responsible_party")), str) and party
+    }
     party_result = calculate_precision_recall(exp_parties, act_parties)
     
     overall = (

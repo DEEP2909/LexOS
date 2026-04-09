@@ -135,7 +135,7 @@ async def retry_with_backoff(
 ) -> Any:
     """Execute a function with exponential backoff retry"""
     config = config or RetryConfig()
-    last_exception = None
+    last_exception: Optional[Exception] = None
     
     for attempt in range(config.max_attempts):
         try:
@@ -163,6 +163,8 @@ async def retry_with_backoff(
             )
             await asyncio.sleep(delay)
     
+    if last_exception is None:
+        raise RuntimeError("Retry failed without capturing an exception")
     raise last_exception
 
 
@@ -363,6 +365,7 @@ class SafeLLMClient:
             min_confidence: Minimum confidence threshold
             max_validation_attempts: Max attempts to get valid response
         """
+        result: dict[str, Any] = {"response": "", "confidence": 0.0}
         for attempt in range(max_validation_attempts):
             result = await self.generate(prompt, min_confidence, **kwargs)
             
