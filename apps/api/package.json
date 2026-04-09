@@ -20,6 +20,10 @@
     "migrate:down": "node-pg-migrate down",
     "seed": "tsx src/seed.ts"
   },
+  "node-pg-migrate": {
+    "migrationsTable": "pgmigrations",
+    "dir": "../../db/migrations"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.645.0",
     "@aws-sdk/s3-request-presigner": "^3.645.0",

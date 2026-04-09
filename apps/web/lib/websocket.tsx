@@ -170,6 +170,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     return () => {
       ws.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user]);
 
   // Reconnect logic

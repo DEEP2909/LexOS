@@ -3,15 +3,16 @@ LexOS AI Service - Comprehensive Test Suite
 Tests for OCR, Embeddings, Clause Extraction, Risk Assessment, Research, and Obligations
 """
 
+import sys
+import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from io import BytesIO
 
-# Import the FastAPI app
-import sys
+# Add ai-service root to path so 'main' is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.main import app
+from main import app
 
 client = TestClient(app)
 
@@ -65,7 +66,7 @@ class TestOCR:
         )
         assert response.status_code == 400
     
-    @patch('src.ocr.tesseract_ocr')
+    @patch('routers.ocr.tesseract_ocr')
     def test_pdf_ocr(self, mock_tesseract):
         """Test OCR on PDF file"""
         mock_tesseract.return_value = "Extracted text from PDF"
@@ -81,7 +82,7 @@ class TestOCR:
         # May succeed or fail depending on tesseract availability
         assert response.status_code in [200, 500]
     
-    @patch('src.ocr.tesseract_ocr')
+    @patch('routers.ocr.tesseract_ocr')
     def test_image_ocr(self, mock_tesseract):
         """Test OCR on image file"""
         mock_tesseract.return_value = "Text from image"
@@ -99,7 +100,7 @@ class TestOCR:
     def test_ocr_language_detection(self):
         """Test language detection in OCR"""
         # With mock
-        with patch('src.ocr.detect_language') as mock_detect:
+        with patch('routers.ocr.detect_language') as mock_detect:
             mock_detect.return_value = "en"
             # Just verifying the function exists
             assert callable(mock_detect)

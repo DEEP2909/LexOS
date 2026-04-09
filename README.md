@@ -132,7 +132,7 @@ npm run dev
 ### Build and Test Notes
 
 - The web app builds as a Next.js standalone bundle. `apps/web/public/.gitkeep` is committed so the Docker runner stage can always copy `/public`, and `apps/web/next.config.js` enables `.next/standalone`.
-- API tests use `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`. CI now runs `npm run migrate:up -w @lexos/api` before the Node test job so the Postgres service has the expected schema.
+- API tests use `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`. `apps/api/package.json` now pins node-pg-migrate to `../../db/migrations`, and CI runs `npm run migrate:up -w @lexos/api` before the Node test job so Postgres has the expected schema.
 - End-to-end `npm test --workspace=apps/api` still requires reachable Postgres and Redis test services.
 - AI tests use `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and should be run with Python 3.11.
 - The AI Docker image now installs Debian Trixie-compatible OpenGL runtime packages via `libgl1` in both Dockerfile stages.

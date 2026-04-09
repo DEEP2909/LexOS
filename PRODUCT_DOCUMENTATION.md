@@ -784,7 +784,9 @@ lexos/
 │   │   │   ├── datasets.py         # Golden datasets
 │   │   │   └── scoring.py          # Metrics calculation
 │   │   ├── tests/
+│   │   │   ├── conftest.py         # Pytest path setup
 │   │   │   └── test_ai_service.py  # AI tests (66 tests)
+│   │   ├── pytest.ini              # Pytest configuration
 │   │   ├── requirements.txt        # Python dependencies
 │   │   └── Dockerfile              # Production container
 │   │
@@ -800,6 +802,8 @@ lexos/
 │   │   └── Dockerfile
 │   │
 │   └── web/                        # Next.js frontend
+│       ├── public/                 # Static assets directory
+│       │   └── .gitkeep            # Placeholder for git
 │       ├── app/
 │       │   ├── layout.tsx          # Root layout
 │       │   ├── page.tsx            # Home redirect
@@ -2601,7 +2605,7 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.2.4 Harness Notes
 - The web build depends on Next.js standalone output and a committed `apps/web/public/` directory so the Docker runner can copy both `/public` and `.next/standalone`.
-- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test database schema exists before suite startup.
+- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; node-pg-migrate is configured in `apps/api/package.json` to read `../../db/migrations`, and CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test schema exists before suite startup.
 - API tests still require reachable Postgres and Redis services when executed end to end.
 - AI-service pytest collection is wired through `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and the pinned dependency stack is intended for Python 3.11.
 - The AI-service Docker image uses Debian Trixie-compatible `libgl1` packages in both build and runtime stages.
