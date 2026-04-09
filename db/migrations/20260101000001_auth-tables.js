@@ -210,34 +210,10 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('sso_providers', 'tenant_id');
 
-  // ============================================================
-  // 23. SCIM_TOKENS
-  // ============================================================
-  pgm.createTable('scim_tokens', {
-    id: {
-      type: 'uuid',
-      primaryKey: true,
-      default: pgm.func('gen_random_uuid()'),
-    },
-    tenant_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'tenants',
-      onDelete: 'CASCADE',
-    },
-    name: { type: 'text', notNull: true },
-    token_prefix: { type: 'text', notNull: true },
-    token_hash: { type: 'text', notNull: true, unique: true },
-    status: { type: 'text', notNull: true, default: "'active'" },
-    last_used_at: { type: 'timestamptz' },
-    created_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()'),
-    },
-  });
-  pgm.createIndex('scim_tokens', 'tenant_id');
-  pgm.createIndex('scim_tokens', 'token_hash');
+  // NOTE: scim_tokens table is created in
+  // 20260401000007_add-scim.js with its complete schema
+  // (includes description, expires_at, created_by, scim_sync_logs).
+  // Do NOT define it here to avoid "relation already exists" errors.
 
   // ============================================================
   // 24. SHARE_LINKS - Time-limited client portal access
@@ -359,7 +335,7 @@ exports.down = (pgm) => {
   pgm.dropTable('refresh_tokens');
   pgm.dropTable('webhooks');
   pgm.dropTable('share_links');
-  pgm.dropTable('scim_tokens');
+  // scim_tokens is dropped in 000007_add-scim.js
   pgm.dropTable('sso_providers');
   pgm.dropTable('passkeys');
   pgm.dropTable('mfa_enrollments');

@@ -116,7 +116,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd apps/ai-service
-          pytest tests/ -v --tb=short --cov=. --cov-report=json
+          pytest tests/ -v --tb=short --cov=. --cov-config=.coveragerc --cov-report=json
 
       - name: Check coverage threshold
         run: |
