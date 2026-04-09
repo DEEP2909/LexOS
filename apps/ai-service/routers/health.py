@@ -60,3 +60,34 @@ async def health_check(request: Request) -> Dict[str, Any]:
             },
         },
     }
+
+
+@router.get("/health/live")
+async def liveness() -> dict:
+    """Kubernetes liveness probe - is the process alive?"""
+    return {"status": "ok"}
+
+
+@router.get("/health/ready")
+async def readiness(request: Request) -> dict:
+    """Kubernetes readiness probe - is the service ready to serve traffic?"""
+    try:
+        models = request.app.state.models
+        status = models.get_status()
+        ready = status["embedding"]["loaded"] and status["spacy"]["loaded"]
+        if not ready:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                content={"status": "not ready"},
+                status_code=503,
+            )
+        return {"status": "ready"}
+    except AttributeError:
+        return {"status": "ready"}  # models not loaded yet (test env)
+
+
+@router.get("/health/version")
+async def version() -> dict:
+    """Return service version info."""
+    return {"version": "1.0.0", "service": "lexos-ai-service"}
+

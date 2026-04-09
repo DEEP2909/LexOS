@@ -3,7 +3,7 @@
 ## Enterprise Legal AI Platform - Full Technical & Product Reference
 
 **Version**: 1.0.0  
-**Last Updated**: April 8, 2026  
+**Last Updated**: April 9, 2026  
 **Classification**: Internal / Partner Documentation
 
 ---
@@ -720,6 +720,7 @@ lexos/
 ├── DEPLOYMENT_GUIDE.md             # Cloud deployment guide
 ├── PRODUCT_DOCUMENTATION.md        # This file
 ├── claude.md                       # AI assistant context
+├── .trivyignore                    # CVE suppressions for devDependencies
 │
 ├── apps/
 │   ├── api/                        # Fastify REST API
@@ -784,7 +785,7 @@ lexos/
 │   │   │   ├── datasets.py         # Golden datasets
 │   │   │   └── scoring.py          # Metrics calculation
 │   │   ├── tests/
-│   │   │   ├── conftest.py         # Pytest path setup
+│   │   │   ├── conftest.py         # Pytest config + mock app state fixture
 │   │   │   └── test_ai_service.py  # AI tests (66 tests)
 │   │   ├── pytest.ini              # Pytest configuration
 │   │   ├── requirements.txt        # Python dependencies
@@ -857,6 +858,8 @@ lexos/
 │       ├── 20260401000006_add-sso.js
 │       ├── 20260401000007_add-scim.js
 │       └── 20260401000008_add-analytics.js
+│       ├── 20260401000009_add-sources-used.js
+│       └── 20260401000010_add-document-versions.js
 │
 ├── k8s/
 │   └── deployment.yaml             # Kubernetes manifests
@@ -2975,7 +2978,7 @@ See Section 6.1 for entity relationship diagram.
 ---
 
 **Document Version**: 1.0.0  
-**Last Updated**: April 8, 2026  
+**Last Updated**: April 9, 2026  
 **Authors**: LexOS Engineering Team  
 **Classification**: Internal / Partner Documentation
 

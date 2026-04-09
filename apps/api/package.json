@@ -15,15 +15,12 @@
     "test:coverage": "vitest run --coverage --coverage.reportsDirectory=../../coverage",
     "test:watch": "vitest",
     "test:isolation": "vitest run src/tests/isolation.test.ts",
-    "migrate": "node-pg-migrate",
-    "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down",
+    "migrate": "node-pg-migrate --migrations-dir ../../db/migrations",
+    "migrate:up": "node-pg-migrate up --migrations-dir ../../db/migrations",
+    "migrate:down": "node-pg-migrate down --migrations-dir ../../db/migrations",
     "seed": "tsx src/seed.ts"
   },
-  "node-pg-migrate": {
-    "migrationsTable": "pgmigrations",
-    "dir": "../../db/migrations"
-  },
+
   "dependencies": {
     "@aws-sdk/client-s3": "^3.645.0",
     "@aws-sdk/s3-request-presigner": "^3.645.0",

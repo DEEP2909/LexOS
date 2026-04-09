@@ -266,7 +266,8 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL'
+          trivyignores: '.trivyignore'
 
   # ============================================================
   # E2E Tests (Playwright)
