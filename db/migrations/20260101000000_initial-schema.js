@@ -548,31 +548,13 @@ exports.up = (pgm) => {
   pgm.createIndex('ai_model_events', 'task_type');
   pgm.createIndex('ai_model_events', 'created_at');
 
-  // ============================================================
-  // 16. TENANT_AI_QUOTAS - Usage limits per tenant/plan
-  // ============================================================
-  pgm.createTable('tenant_ai_quotas', {
-    tenant_id: {
-      type: 'uuid',
-      primaryKey: true,
-      references: 'tenants',
-      onDelete: 'CASCADE',
-    },
-    monthly_doc_limit: { type: 'integer', default: 100 },
-    monthly_research_limit: { type: 'integer', default: 500 },
-    api_tier: { type: 'text', default: "'opensource'" },
-    current_month_docs: { type: 'integer', default: 0 },
-    current_month_research: { type: 'integer', default: 0 },
-    quota_reset_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func("date_trunc('month', now()) + INTERVAL '1 month'"),
-    },
-  });
+  // NOTE: tenant_ai_quotas table is created in
+  // 20260101000004_add-billing.js with its complete schema.
+  // Do NOT define it here to avoid "relation already exists" errors.
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('tenant_ai_quotas');
+  // tenant_ai_quotas is dropped in 000004_add-billing.js
   pgm.dropTable('ai_model_events');
   pgm.dropTable('research_history');
   pgm.dropTable('workflow_jobs');

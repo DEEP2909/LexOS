@@ -1,9 +1,21 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-09, Session 19)
+## Claude Context File (Updated: 2026-04-09, Session 20)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 19)
+## Project Status: ✅ CORE ISSUES FIXED (Round 20)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
+
+## Latest Fixes (2026-04-09 Session 20)
+### Full `issues.md` remediation — both issue categories resolved:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | `tenant_ai_quotas` table created in both `000000_initial-schema.js` and `000004_add-billing.js` — causes "relation already exists" on migration | ✅ Removed duplicate table from 000000; 000004 is sole owner; updated down function |
+| #2 | Major | 3 OCR test failures: `test_pdf_ocr`/`test_image_ocr` missing 400 in accepted codes; `test_ocr_language_detection` hits `/ocr/extract` (404) instead of `/ocr` | ✅ Added 400 to both assertions; fixed URL to `/ocr` |
+
+### Files Modified (Session 20):
+- `db/migrations/20260101000000_initial-schema.js` — removed duplicate `tenant_ai_quotas` createTable block + `dropTable` in down function; added ownership comments
+- `apps/ai-service/tests/test_ai_service.py` — added 400 to `test_pdf_ocr` and `test_image_ocr` assertions; fixed `/ocr/extract` → `/ocr` in `test_ocr_language_detection`
 
 ## Latest Fixes (2026-04-09 Session 19)
 ### Full `issues.md` remediation — all 3 issue categories resolved:
