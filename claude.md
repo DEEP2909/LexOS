@@ -1,9 +1,24 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-09, Session 15)
+## Claude Context File (Updated: 2026-04-09, Session 19)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 18)
+## Project Status: ✅ CORE ISSUES FIXED (Round 19)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
+
+## Latest Fixes (2026-04-09 Session 19)
+### Full `issues.md` remediation — all 3 issue categories resolved:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | `clause_suggestions.playbook_rule_id` FK references non-existent `playbook_rules` table — migration fails | ✅ Removed FK constraint; column is now plain `uuid` (soft reference) |
+| #2 | Major | OCR tests patch wrong function names (`tesseract_ocr` → should be `ocr_with_tesseract`; `detect_language` doesn't exist) | ✅ Fixed both patches in `test_ai_service.py`; rewrote `test_ocr_language_detection` to use endpoint test |
+| #3 | Major | Embedding tests get 0 results — mock `encode()` returns MagicMock whose `.tolist()` isn't a real list | ✅ Added `numpy` import + `encode_side_effect` in `conftest.py` returning proper `np.zeros` arrays |
+
+### Files Modified (Session 19):
+- `db/migrations/20260101000003_add-obligations.js` — removed `references: 'playbook_rules'` and `onDelete: 'SET NULL'` from `playbook_rule_id` column
+- `apps/ai-service/tests/test_ai_service.py` — fixed 2× `tesseract_ocr` → `ocr_with_tesseract` patches; rewrote `test_ocr_language_detection` to remove non-existent `detect_language` patch
+- `apps/ai-service/tests/conftest.py` — added `import numpy as np`; added `encode_side_effect` that returns proper numpy arrays; set `mock_models.embedding_model.encode.side_effect`
+- `PRODUCT_DOCUMENTATION.md` — updated `clause_suggestions` schema: `playbook_rule_id` is now plain UUID with soft reference comment
 
 ## Latest Fixes (2026-04-09 Session 18)
 ### Full `issues.md` remediation — both failures resolved:

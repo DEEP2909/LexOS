@@ -2,6 +2,7 @@ import sys
 import os
 import pytest
 from unittest.mock import MagicMock
+import numpy as np
 
 # Ensure the ai-service root is importable for all tests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +25,15 @@ def mock_app_state():
         "spacy": {"loaded": True, "model": "en_core_web_trf"},
         "ocr": {"tesseract": {"available": True}},
     }
+
+    # Configure encode() to return a proper array that .tolist() works on
+    def encode_side_effect(texts, **kwargs):
+        if isinstance(texts, list):
+            return np.zeros((len(texts), 384))  # batch: shape (n, 384)
+        return np.zeros(384)  # single text: shape (384,)
+
+    mock_models.embedding_model.encode.side_effect = encode_side_effect
+
     mock_settings = MagicMock()
     mock_settings.ollama_base_url = "http://localhost:11434"
     mock_settings.embedding_model = "all-MiniLM-L6-v2"

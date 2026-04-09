@@ -146,8 +146,6 @@ exports.up = (pgm) => {
     compliance_citations: { type: 'text[]', default: pgm.func("'{}'::text[]") },
     playbook_rule_id: {
       type: 'uuid',
-      references: 'playbook_rules',
-      onDelete: 'SET NULL',
     },
     confidence: {
       type: 'numeric(5,4)',

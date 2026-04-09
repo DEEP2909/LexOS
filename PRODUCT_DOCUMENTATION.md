@@ -1087,7 +1087,7 @@ CREATE TABLE clause_suggestions (
     suggested_text TEXT,
     reasoning TEXT,
     confidence DECIMAL(4,3),
-    playbook_rule_id UUID REFERENCES playbook_rules(id),
+    playbook_rule_id UUID,  -- soft reference (no FK constraint)
     status VARCHAR(50) DEFAULT 'pending',
     reviewed_by UUID REFERENCES attorneys(id),
     reviewed_at TIMESTAMPTZ,
