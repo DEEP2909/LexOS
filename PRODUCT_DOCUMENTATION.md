@@ -3,7 +3,7 @@
 ## Enterprise Legal AI Platform - Full Technical & Product Reference
 
 **Version**: 1.0.0  
-**Last Updated**: April 8, 2026  
+**Last Updated**: April 9, 2026  
 **Classification**: Internal / Partner Documentation
 
 ---
@@ -2599,6 +2599,11 @@ app.addHook('preHandler', (req, reply, done) => {
 - Cross-browser testing
 - Mobile viewport testing
 
+## 16.2.4 Harness Notes
+- The web build depends on Next.js standalone output and a committed `apps/web/public/` directory so the Docker runner can copy both `/public` and `.next/standalone`.
+- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; they require reachable Postgres and Redis services when executed end to end.
+- AI-service pytest collection is wired through `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and the pinned dependency stack is intended for Python 3.11.
+
 ## 16.3 Test Files
 
 | File | Tests | Coverage |
@@ -2961,7 +2966,7 @@ See Section 6.1 for entity relationship diagram.
 ---
 
 **Document Version**: 1.0.0  
-**Last Updated**: April 8, 2026  
+**Last Updated**: April 9, 2026  
 **Authors**: LexOS Engineering Team  
 **Classification**: Internal / Partner Documentation
 

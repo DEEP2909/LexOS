@@ -20,8 +20,8 @@
   <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg" alt="Node"/>
-  <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"/>
-  <img src="https://img.shields.io/badge/tests-481%20passed-brightgreen.svg" alt="Tests"/>
+  <img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python"/>
+  <img src="https://img.shields.io/badge/tests-481-brightgreen.svg" alt="Tests"/>
   <img src="https://img.shields.io/badge/coverage-%3E70%25-brightgreen.svg" alt="Coverage"/>
 </p>
 
@@ -98,10 +98,12 @@ LexOS automates contract analysis, extracts key clauses, assesses risks against 
 ### Prerequisites
 
 - Node.js 20 LTS
-- Python 3.11+
+- Python 3.11
 - Docker & Docker Compose
 - PostgreSQL 16 with pgvector
 - Redis 7
+
+Python 3.13 is not currently supported by the pinned AI-service stack. Use Python 3.11 for `apps/ai-service` installs and pytest runs.
 
 ### Installation
 
@@ -128,6 +130,12 @@ npm run seed --workspace=apps/api
 # Start all services in development mode
 npm run dev
 ```
+
+### Build and Test Notes
+
+- The web app builds as a Next.js standalone bundle. `apps/web/public/.gitkeep` is committed so the Docker runner stage can always copy `/public`, and `apps/web/next.config.js` enables `.next/standalone`.
+- API tests use `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`. End-to-end `npm test --workspace=apps/api` still requires reachable Postgres and Redis test services.
+- AI tests use `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and should be run with Python 3.11.
 
 ### Access Points
 

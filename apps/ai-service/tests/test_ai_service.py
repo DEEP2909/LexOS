@@ -9,10 +9,8 @@ from fastapi.testclient import TestClient
 from io import BytesIO
 
 # Import the FastAPI app
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.main import app
+from config import get_settings
+from main import app
 
 client = TestClient(app)
 
@@ -66,10 +64,10 @@ class TestOCR:
         )
         assert response.status_code == 400
     
-    @patch('src.ocr.tesseract_ocr')
+    @patch('routers.ocr.ocr_with_tesseract')
     def test_pdf_ocr(self, mock_tesseract):
-        """Test OCR on PDF file"""
-        mock_tesseract.return_value = "Extracted text from PDF"
+        """Test OCR rejects PDF files in the direct OCR endpoint."""
+        mock_tesseract.return_value = ("Extracted text from PDF", 0.98)
         
         # Create minimal valid PDF
         pdf_content = b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF'
@@ -79,13 +77,14 @@ class TestOCR:
             "/ocr",
             files={"file": ("test.pdf", file, "application/pdf")}
         )
-        # May succeed or fail depending on tesseract availability
-        assert response.status_code in [200, 500]
-    
-    @patch('src.ocr.tesseract_ocr')
-    def test_image_ocr(self, mock_tesseract):
+        assert response.status_code == 400
+
+    @patch('routers.ocr.preprocess_image')
+    @patch('routers.ocr.ocr_with_tesseract')
+    def test_image_ocr(self, mock_tesseract, mock_preprocess):
         """Test OCR on image file"""
-        mock_tesseract.return_value = "Text from image"
+        mock_preprocess.return_value = object()
+        mock_tesseract.return_value = ("Text from image", 0.97)
         
         # 1x1 white PNG
         png = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
@@ -95,15 +94,13 @@ class TestOCR:
             "/ocr",
             files={"file": ("test.png", file, "image/png")}
         )
-        assert response.status_code in [200, 500]
+        assert response.status_code == 200
+        assert response.json()["text"] == "Text from image"
     
-    def test_ocr_language_detection(self):
-        """Test language detection in OCR"""
-        # With mock
-        with patch('src.ocr.detect_language') as mock_detect:
-            mock_detect.return_value = "en"
-            # Just verifying the function exists
-            assert callable(mock_detect)
+    def test_ocr_engine_configuration(self):
+        """Test OCR engines are parsed from settings."""
+        settings = get_settings()
+        assert "tesseract" in settings.ocr_engine_list
 
 
 # =============================================================================

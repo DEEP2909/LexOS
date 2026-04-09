@@ -3,6 +3,7 @@
  * RS256 JWT token issuance and validation
  */
 
+import crypto from 'node:crypto';
 import fs from 'fs';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { config, isProduction } from './config.js';
@@ -151,6 +152,35 @@ export async function generateRefreshToken(payload: {
     .sign(privateKey);
 
   return token;
+}
+
+export const createAccessToken = generateAccessToken;
+
+export async function createRefreshToken(
+  payload:
+    | string
+    | {
+        sub: string;
+        tenantId: string;
+        email: string;
+        role: string;
+        tokenId?: string;
+      }
+): Promise<string> {
+  if (typeof payload === 'string') {
+    return generateRefreshToken({
+      sub: payload,
+      tenantId: '00000000-0000-0000-0000-000000000000',
+      email: `${payload}@lexos.test`,
+      role: 'attorney',
+      tokenId: crypto.randomUUID(),
+    });
+  }
+
+  return generateRefreshToken({
+    ...payload,
+    tokenId: payload.tokenId ?? crypto.randomUUID(),
+  });
 }
 
 // ============================================================

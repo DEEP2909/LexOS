@@ -4,10 +4,8 @@ Optical Character Recognition endpoints.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
-import cv2
-import numpy as np
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
@@ -36,13 +34,16 @@ class OCRRequest(BaseModel):
     engine: Optional[str] = None
 
 
-def preprocess_image(image_bytes: bytes) -> np.ndarray:
+def preprocess_image(image_bytes: bytes) -> Any:
     """
     Preprocess image for better OCR results.
     - Convert to grayscale
     - Apply adaptive thresholding
     - Denoise
     """
+    import cv2
+    import numpy as np
+
     # Read image
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -66,7 +67,7 @@ def preprocess_image(image_bytes: bytes) -> np.ndarray:
     return thresh
 
 
-def ocr_with_tesseract(image: np.ndarray) -> tuple[str, float]:
+def ocr_with_tesseract(image: Any) -> tuple[str, float]:
     """Perform OCR using Tesseract."""
     import pytesseract
     
@@ -88,7 +89,7 @@ def ocr_with_tesseract(image: np.ndarray) -> tuple[str, float]:
     return text, avg_confidence / 100
 
 
-def ocr_with_easyocr(image: np.ndarray, reader) -> tuple[str, float]:
+def ocr_with_easyocr(image: Any, reader) -> tuple[str, float]:
     """Perform OCR using EasyOCR."""
     results = reader.readtext(image)
     
@@ -105,7 +106,7 @@ def ocr_with_easyocr(image: np.ndarray, reader) -> tuple[str, float]:
     return text, avg_confidence
 
 
-def ocr_with_paddleocr(image: np.ndarray, ocr) -> tuple[str, float]:
+def ocr_with_paddleocr(image: Any, ocr) -> tuple[str, float]:
     """Perform OCR using PaddleOCR."""
     results = ocr.ocr(image, cls=True)
     

@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  ReactNode,
+  useRef,
+} from "react";
 import { useAuthStore } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -50,11 +58,9 @@ interface WebSocketProviderProps {
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const { isAuthenticated, user } = useAuthStore();
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [subscribers, setSubscribers] = useState<Map<string, Set<(data: WebSocketEvent) => void>>>(
-    new Map()
-  );
+  const socketRef = useRef<WebSocket | null>(null);
+  const subscribersRef = useRef<Map<string, Set<(data: WebSocketEvent) => void>>>(new Map());
   const [documentProgress, setDocumentProgress] = useState<Map<string, { progress: number; stage: string }>>(
     new Map()
   );
@@ -63,9 +69,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   useEffect(() => {
     if (!isAuthenticated || !user) {
       // Disconnect if not authenticated
-      if (socket) {
-        socket.close();
-        setSocket(null);
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
         setIsConnected(false);
       }
       return;
@@ -140,13 +146,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         }
 
         // Notify subscribers
-        const eventSubscribers = subscribers.get(data.type);
+        const eventSubscribers = subscribersRef.current.get(data.type);
         if (eventSubscribers) {
           eventSubscribers.forEach((callback) => callback(data));
         }
 
         // Also notify "all" subscribers
-        const allSubscribers = subscribers.get("*");
+        const allSubscribers = subscribersRef.current.get("*");
         if (allSubscribers) {
           allSubscribers.forEach((callback) => callback(data));
         }
@@ -164,10 +170,11 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       console.error("[WebSocket] Error:", error);
     };
 
-    setSocket(ws);
+    socketRef.current = ws;
 
     // Cleanup on unmount
     return () => {
+      socketRef.current = null;
       ws.close();
     };
   }, [isAuthenticated, user]);
@@ -186,28 +193,20 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   const subscribe = useCallback(
     (event: string, callback: (data: WebSocketEvent) => void) => {
-      setSubscribers((prev) => {
-        const next = new Map(prev);
-        if (!next.has(event)) {
-          next.set(event, new Set());
-        }
-        next.get(event)!.add(callback);
-        return next;
-      });
+      if (!subscribersRef.current.has(event)) {
+        subscribersRef.current.set(event, new Set());
+      }
+      subscribersRef.current.get(event)!.add(callback);
 
       // Return unsubscribe function
       return () => {
-        setSubscribers((prev) => {
-          const next = new Map(prev);
-          const eventSet = next.get(event);
-          if (eventSet) {
-            eventSet.delete(callback);
-            if (eventSet.size === 0) {
-              next.delete(event);
-            }
+        const eventSet = subscribersRef.current.get(event);
+        if (eventSet) {
+          eventSet.delete(callback);
+          if (eventSet.size === 0) {
+            subscribersRef.current.delete(event);
           }
-          return next;
-        });
+        }
       };
     },
     []

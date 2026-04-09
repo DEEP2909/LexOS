@@ -40,6 +40,16 @@ async def lifespan(app: FastAPI):
     logger.info(f"OCR engines: {settings.ocr_engine_list}")
     logger.info(f"LLM model: {settings.ollama_model_extract}")
     
+    # Tests exercise the live routers but should not download or initialize heavy models.
+    if settings.environment == "test":
+        model_registry = ModelRegistry(settings)
+        model_registry._ocr_engines["tesseract"] = {"type": "tesseract", "available": True}
+        app.state.models = model_registry
+        app.state.settings = settings
+        logger.info("Test environment detected, skipping model loading")
+        yield
+        return
+
     # Initialize model registry and load models
     model_registry = ModelRegistry(settings)
     await model_registry.load_all()
