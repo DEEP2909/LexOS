@@ -58,6 +58,12 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Run API migrations
+        run: npm run migrate:up -w @lexos/api
+        env:
+          DATABASE_URL: postgresql://lexos:test_password@localhost:5432/lexos_test
+          NODE_ENV: test
+
       - name: Run tests with coverage
         run: npm run test:coverage
         env:

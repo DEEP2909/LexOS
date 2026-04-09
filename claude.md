@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-09, Session 13)
+## Claude Context File (Updated: 2026-04-09, Session 15)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 13)
+## Project Status: ✅ CORE ISSUES FIXED (Round 15)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -14,6 +14,60 @@
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
 
+## Latest Fixes (2026-04-09 Session 15)
+### Follow-up `issues.md` remediation pass:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | AI-service Docker build still referenced removed Debian Trixie package `libgl1-mesa-glx` | ✅ Replaced with `libgl1` in both `apps/ai-service/Dockerfile` apt install stages |
+| #2 | Critical | `node-checks` CI job still ran API tests before applying schema migrations | ✅ Added a dedicated migration step in `.github/workflows/ci.yml` before the coverage test run |
+| #3 | Minor | `apps/ai-service/tests/test_ai_service.py` still had unused `import os`, breaking Ruff | ✅ Removed the stale import so the test file matches the `conftest.py` bootstrap approach |
+
+### Verification Notes (Session 15):
+- `npm run typecheck --workspace=apps/api` passed on 2026-04-09 after the CI workflow/doc updates.
+- `python -m compileall apps/ai-service` passed on 2026-04-09 after the AI-service test cleanup.
+
+### Files Modified (Session 15):
+- `.github/workflows/ci.yml`
+- `apps/ai-service/Dockerfile`
+- `apps/ai-service/tests/test_ai_service.py`
+- `README.md`
+- `PRODUCT_DOCUMENTATION.md`
+- `../issues.md`
+
+## Latest Fixes (2026-04-09 Session 14)
+### Updated `issues.md` remediation and verification pass:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | Web Docker build failed because `apps/web/public` and `.next/standalone` were not guaranteed | ✅ Added `apps/web/public/.gitkeep`, enabled `output: 'standalone'` in `apps/web/next.config.js`, and cleaned `apps/web/lib/websocket.tsx`; `npm run build --workspace=apps/web` now succeeds |
+| #2 | Critical | API tests crashed before collection because test imports hit pretty-logging/bootstrap issues | ✅ Made pretty logging development-only and optional, added `apps/api/vitest.config.ts` + `apps/api/tests/setup.ts`, exported `build()` from `apps/api/src/index.ts`, added auth test compatibility helpers, and disabled Redis/WebSocket infra during `NODE_ENV=test` |
+| #3 | Critical | AI pytest collection used obsolete `src.*` imports | ✅ Added `apps/ai-service/tests/conftest.py`, `apps/ai-service/pytest.ini`, updated `tests/test_ai_service.py` to import `main`, patched current OCR router symbols, and skipped heavyweight model loading in test mode |
+
+### Verification Notes (Session 14):
+- `npm run build --workspace=apps/web` passed on 2026-04-09.
+- `npm run typecheck --workspace=apps/api` passed on 2026-04-09.
+- `npm test --workspace=apps/api` now reaches real DB-backed tests; remaining failures in this environment are local Postgres credential mismatches rather than the original startup crash.
+- `python -m compileall apps/ai-service` passed on 2026-04-09.
+- Full AI dependency installation still fails on this machine because the current interpreter is Python 3.13 while the pinned AI stack targets Python 3.11.
+
+### Files Modified (Session 14):
+- `apps/web/next.config.js`
+- `apps/web/lib/websocket.tsx`
+- `apps/web/public/.gitkeep` (new)
+- `apps/api/src/logger.ts`
+- `apps/api/src/index.ts`
+- `apps/api/src/auth.ts`
+- `apps/api/vitest.config.ts` (new)
+- `apps/api/tests/setup.ts` (new)
+- `apps/ai-service/main.py`
+- `apps/ai-service/routers/ocr.py`
+- `apps/ai-service/tests/test_ai_service.py`
+- `apps/ai-service/tests/conftest.py` (new)
+- `apps/ai-service/pytest.ini` (new)
+- `README.md`
+- `PRODUCT_DOCUMENTATION.md`
+- `../issues.md`
 ## Latest Fixes (2026-04-09 Session 13)
 ### Updated `issues.md` full remediation closure:
 
