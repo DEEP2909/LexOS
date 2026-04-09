@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg" alt="Node"/>
   <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"/>
   <img src="https://img.shields.io/badge/tests-481%20passed-brightgreen.svg" alt="Tests"/>
-  <img src="https://img.shields.io/badge/coverage-%3E70%25-brightgreen.svg" alt="Coverage"/>
+  <img src="https://img.shields.io/badge/coverage-%3E70%25%20(Node)%20%7C%20%3E40%25%20(Python)-brightgreen.svg" alt="Coverage"/>
 </p>
 
 ---
@@ -301,9 +301,9 @@ npm run test:isolation --workspace=apps/api
 | Component | Tests | Coverage |
 |-----------|-------|----------|
 | API | 325 | >70% |
-| AI Service | 66 | >70% |
+| AI Service | 66 | >40% (structural exclusions) |
 | Frontend | 90 | >70% |
-| **Total** | **481** | **>70%** |
+| **Total** | **481** | **>70% / >40%** |
 
 ---
 

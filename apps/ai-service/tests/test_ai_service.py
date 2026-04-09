@@ -3,15 +3,11 @@ LexOS AI Service - Comprehensive Test Suite
 Tests for OCR, Embeddings, Clause Extraction, Risk Assessment, Research, and Obligations
 """
 
-import sys
-import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from io import BytesIO
 
-# Add ai-service root to path so 'main' is importable
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# sys.path is handled by conftest.py — no need to repeat it here
 from main import app
 
 client = TestClient(app)

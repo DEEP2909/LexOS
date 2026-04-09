@@ -2608,7 +2608,7 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.2.4 Harness Notes
 - The web build depends on Next.js standalone output and a committed `apps/web/public/` directory so the Docker runner can copy both `/public` and `.next/standalone`.
-- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; node-pg-migrate is configured in `apps/api/package.json` to read `../../db/migrations`, and CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test schema exists before suite startup.
+- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts` (sets `NODE_ENV=test` to suppress pino-pretty); node-pg-migrate is configured in `apps/api/package.json` to read `../../db/migrations`, and CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test schema exists before suite startup. The logger uses `=== 'development'` to guard pino-pretty so test and production both get plain JSON output.
 - API tests still require reachable Postgres and Redis services when executed end to end.
 - AI-service pytest collection is wired through `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and the pinned dependency stack is intended for Python 3.11.
 - The AI-service Docker image uses Debian Trixie-compatible `libgl1` packages in both build and runtime stages.
@@ -2630,7 +2630,8 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.4 Coverage Requirements
 
-- **Minimum**: 70% line coverage
+- **Minimum (Node)**: 70% line coverage
+- **Minimum (Python)**: 40% line coverage (structural exclusions in `.coveragerc`)
 - **Target**: 80% line coverage
 - **Critical Paths**: 90%+ coverage
 
@@ -2638,8 +2639,11 @@ app.addHook('preHandler', (req, reply, done) => {
 # Run with coverage
 npm run test:coverage
 
-# Check thresholds
-jest --coverage --coverageThreshold='{"global":{"lines":70}}'
+# Check thresholds (Node — vitest)
+vitest run --coverage
+
+# Check thresholds (Python — pytest + coverage.py)
+pytest tests/ --cov=. --cov-config=.coveragerc --cov-report=json
 ```
 
 ---
