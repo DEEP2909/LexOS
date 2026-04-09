@@ -3,7 +3,6 @@ LexOS AI Service - Comprehensive Test Suite
 Tests for OCR, Embeddings, Clause Extraction, Risk Assessment, Research, and Obligations
 """
 
-import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from io import BytesIO

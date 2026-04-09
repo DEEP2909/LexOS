@@ -2601,8 +2601,10 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.2.4 Harness Notes
 - The web build depends on Next.js standalone output and a committed `apps/web/public/` directory so the Docker runner can copy both `/public` and `.next/standalone`.
-- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; they require reachable Postgres and Redis services when executed end to end.
+- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`; CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test database schema exists before suite startup.
+- API tests still require reachable Postgres and Redis services when executed end to end.
 - AI-service pytest collection is wired through `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and the pinned dependency stack is intended for Python 3.11.
+- The AI-service Docker image uses Debian Trixie-compatible `libgl1` packages in both build and runtime stages.
 
 ## 16.3 Test Files
 
@@ -2681,6 +2683,10 @@ stages:
   - deploy        # Kubernetes
   - verify        # Smoke tests
 ```
+
+### 17.3.1 Current CI Notes
+- The `node-checks` workflow now runs API migrations against the ephemeral Postgres service before coverage tests.
+- The `docker-build` workflow uses the updated AI-service Dockerfile package list compatible with current `python:3.11-slim` Debian Trixie images.
 
 ---
 

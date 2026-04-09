@@ -1,7 +1,7 @@
 # LexOS - Enterprise Legal AI Platform
-## Claude Context File (Updated: 2026-04-09, Session 14)
+## Claude Context File (Updated: 2026-04-09, Session 15)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 14)
+## Project Status: ✅ CORE ISSUES FIXED (Round 15)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
 
@@ -13,6 +13,27 @@
 - **Migrations**: 12 database migration files
 - **Components**: 40+ React components
 - **API Endpoints**: 125+ routes
+
+## Latest Fixes (2026-04-09 Session 15)
+### Follow-up `issues.md` remediation pass:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | AI-service Docker build still referenced removed Debian Trixie package `libgl1-mesa-glx` | ✅ Replaced with `libgl1` in both `apps/ai-service/Dockerfile` apt install stages |
+| #2 | Critical | `node-checks` CI job still ran API tests before applying schema migrations | ✅ Added a dedicated migration step in `.github/workflows/ci.yml` before the coverage test run |
+| #3 | Minor | `apps/ai-service/tests/test_ai_service.py` still had unused `import os`, breaking Ruff | ✅ Removed the stale import so the test file matches the `conftest.py` bootstrap approach |
+
+### Verification Notes (Session 15):
+- `npm run typecheck --workspace=apps/api` passed on 2026-04-09 after the CI workflow/doc updates.
+- `python -m compileall apps/ai-service` passed on 2026-04-09 after the AI-service test cleanup.
+
+### Files Modified (Session 15):
+- `.github/workflows/ci.yml`
+- `apps/ai-service/Dockerfile`
+- `apps/ai-service/tests/test_ai_service.py`
+- `README.md`
+- `PRODUCT_DOCUMENTATION.md`
+- `../issues.md`
 
 ## Latest Fixes (2026-04-09 Session 14)
 ### Updated `issues.md` remediation and verification pass:
