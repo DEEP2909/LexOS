@@ -1,9 +1,22 @@
 # LexOS - Enterprise Legal AI Platform
 ## Claude Context File (Updated: 2026-04-09, Session 15)
 
-## Project Status: ✅ CORE ISSUES FIXED (Round 17)
+## Project Status: ✅ CORE ISSUES FIXED (Round 18)
 
 **Production-ready enterprise legal SaaS platform for USA-based law firms.**
+
+## Latest Fixes (2026-04-09 Session 18)
+### Full `issues.md` remediation — both failures resolved:
+
+| Issue | Severity | Description | Status |
+|-------|----------|-------------|--------|
+| #1 | Critical | `obligations` and `clause_suggestions` tables defined in both `000000_initial-schema.js` and `000003_add-obligations.js` — causes "relation already exists" on migration | ✅ Removed both table definitions + indexes from 000000; 000003 is now sole owner |
+| #2 | Major | `health.py` `readiness()` typed as `-> Union[Dict, JSONResponse]` — FastAPI rejects JSONResponse in response model | ✅ Replaced JSONResponse with HTTPException for 503; return type is now `Dict[str, Any]`; removed Union/JSONResponse imports |
+
+### Files Modified (Session 18):
+- `db/migrations/20260101000000_initial-schema.js` — removed duplicate obligations table (section 9) and clause_suggestions table (section 10) + their indexes; updated down function
+- `apps/ai-service/routers/health.py` — imports changed to `HTTPException` (removed `Union`, `JSONResponse`); readiness returns `Dict[str, Any]` and raises HTTPException(503) for not-ready
+- `../issues.md` — marked both resolved with resolution details
 
 ## Latest Fixes (2026-04-09 Session 17)
 ### Full `issues.md` remediation — both failures resolved:

@@ -363,104 +363,9 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('playbooks', 'tenant_id');
 
-  // ============================================================
-  // 9. OBLIGATIONS - Extracted contractual deadlines and duties
-  // ============================================================
-  pgm.createTable('obligations', {
-    id: {
-      type: 'uuid',
-      primaryKey: true,
-      default: pgm.func('gen_random_uuid()'),
-    },
-    tenant_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'tenants',
-      onDelete: 'CASCADE',
-    },
-    matter_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'matters',
-      onDelete: 'CASCADE',
-    },
-    document_id: {
-      type: 'uuid',
-      references: 'documents',
-      onDelete: 'SET NULL',
-    },
-    clause_id: {
-      type: 'uuid',
-      references: 'clauses',
-      onDelete: 'SET NULL',
-    },
-    obligation_type: { type: 'text', notNull: true },
-    party: { type: 'text' },
-    description: { type: 'text', notNull: true },
-    deadline_date: { type: 'date' },
-    deadline_text: { type: 'text' },
-    notice_days: { type: 'integer' },
-    recurrence_rule: { type: 'text' },
-    status: { type: 'text', notNull: true, default: "'active'" },
-    assigned_to: {
-      type: 'uuid',
-      references: 'attorneys',
-    },
-    notes: { type: 'text' },
-    created_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()'),
-    },
-  });
-  pgm.createIndex('obligations', 'tenant_id');
-  pgm.createIndex('obligations', 'matter_id');
-  pgm.createIndex('obligations', ['tenant_id', 'deadline_date']);
-
-  // ============================================================
-  // 10. CLAUSE_SUGGESTIONS - AI-generated redline suggestions
-  // ============================================================
-  pgm.createTable('clause_suggestions', {
-    id: {
-      type: 'uuid',
-      primaryKey: true,
-      default: pgm.func('gen_random_uuid()'),
-    },
-    tenant_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'tenants',
-      onDelete: 'CASCADE',
-    },
-    clause_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'clauses',
-      onDelete: 'CASCADE',
-    },
-    flag_id: {
-      type: 'uuid',
-      references: 'flags',
-      onDelete: 'SET NULL',
-    },
-    suggested_text: { type: 'text', notNull: true },
-    rationale: { type: 'text', notNull: true },
-    risk_level_after_fix: { type: 'text', notNull: true },
-    model_name: { type: 'text', notNull: true },
-    status: { type: 'text', notNull: true, default: "'pending'" },
-    accepted_by: {
-      type: 'uuid',
-      references: 'attorneys',
-    },
-    accepted_at: { type: 'timestamptz' },
-    created_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()'),
-    },
-  });
-  pgm.createIndex('clause_suggestions', 'tenant_id');
-  pgm.createIndex('clause_suggestions', 'clause_id');
+  // NOTE: obligations and clause_suggestions tables are created in
+  // 20260101000003_add-obligations.js with more complete schemas.
+  // Do NOT define them here to avoid "relation already exists" errors.
 
   // ============================================================
   // 11. REVIEW_ACTIONS - Immutable review history
@@ -673,8 +578,7 @@ exports.down = (pgm) => {
   pgm.dropTable('workflow_jobs');
   pgm.dropTable('audit_events');
   pgm.dropTable('review_actions');
-  pgm.dropTable('clause_suggestions');
-  pgm.dropTable('obligations');
+  // obligations and clause_suggestions are dropped in 000003_add-obligations.js
   pgm.dropTable('playbooks');
   pgm.dropTable('flags');
   pgm.dropTable('clauses');

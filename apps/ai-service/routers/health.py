@@ -3,9 +3,8 @@ LexOS AI Service - Health Router
 Health check endpoints.
 """
 
-from typing import Any, Dict, Union
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from typing import Any, Dict
+from fastapi import APIRouter, HTTPException, Request
 import httpx
 
 router = APIRouter()
@@ -70,20 +69,19 @@ async def liveness() -> dict:
 
 
 @router.get("/health/ready")
-async def readiness(request: Request) -> Union[Dict[str, Any], JSONResponse]:
+async def readiness(request: Request) -> Dict[str, Any]:
     """Kubernetes readiness probe - is the service ready to serve traffic?"""
     try:
         models = request.app.state.models
         status = models.get_status()
         ready = status["embedding"]["loaded"] and status["spacy"]["loaded"]
         if not ready:
-            return JSONResponse(
-                content={"status": "not ready"},
-                status_code=503,
-            )
+            raise HTTPException(status_code=503, detail={"status": "not ready"})
         return {"status": "ready"}
     except AttributeError:
         return {"status": "ready"}  # models not loaded yet (test env)
+    except HTTPException:
+        raise  # re-raise the 503 we just threw
 
 
 @router.get("/health/version")
