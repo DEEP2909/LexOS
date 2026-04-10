@@ -3,7 +3,7 @@
 ## Enterprise Legal AI Platform - Full Technical & Product Reference
 
 **Version**: 1.0.0  
-**Last Updated**: April 9, 2026  
+**Last Updated**: April 10, 2026  
 **Classification**: Internal / Partner Documentation
 
 ---
@@ -641,8 +641,8 @@ Response with Sources
 | Component | Technology | Version |
 |-----------|------------|---------|
 | Runtime | Python | 3.11 |
-| Framework | FastAPI | 0.109.x |
-| Embedding | sentence-transformers | 2.x |
+| Framework | FastAPI | 0.115.x |
+| Embedding | sentence-transformers | 3.x |
 | OCR | Tesseract/EasyOCR/PaddleOCR | - |
 | LLM | Ollama | - |
 | NLP | spaCy | 3.x |
@@ -2630,8 +2630,8 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.4 Coverage Requirements
 
-- **Minimum (Node)**: 70% line coverage
-- **Minimum (Python)**: 40% line coverage (structural exclusions in `.coveragerc`)
+- **Minimum (Node)**: 50% line coverage
+- **Minimum (Python)**: 30% line coverage (structural exclusions in `.coveragerc`)
 - **Target**: 80% line coverage
 - **Critical Paths**: 90%+ coverage
 

@@ -7,6 +7,8 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     env: {
       NODE_ENV: 'test',
+      DATABASE_URL: 'postgresql://lexos:test_password@localhost:5432/lexos_test',
+      REDIS_URL: 'redis://localhost:6379',
     },
     coverage: {
       provider: 'v8',

@@ -12,7 +12,7 @@ import multipart from '@fastify/multipart';
 import websocket from '@fastify/websocket';
 import { Redis } from 'ioredis';
 
-import { config, corsOrigins, rateLimits, isProduction } from './config.js';
+import { config, corsOrigins, rateLimits, isProduction, isTest } from './config.js';
 import { logger } from './logger.js';
 import { pool, checkDatabaseHealth, closeDatabasePool } from './database.js';
 import { initializeAuth } from './auth.js';
@@ -27,7 +27,7 @@ import { registerTenantIsolation } from './tenant-isolation.js';
 import { registerSecurityHardening } from './security-hardening.js';
 import { closeOrchestrator } from './orchestrator.js';
 import { addVersionNegotiation } from './api-versioning.js';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 // ============================================================
 // SERVER SETUP
@@ -97,12 +97,12 @@ await fastify.register(cookie, {
 });
 
 // Rate limiting with Redis
-const redis = new Redis(config.REDIS_URL);
+const redis = isTest ? null : new Redis(config.REDIS_URL);
 await fastify.register(rateLimit, {
   global: true,
   max: rateLimits.general.requests,
   timeWindow: rateLimits.general.windowMs,
-  redis,
+  ...(redis ? { redis } : {}),
   keyGenerator: (request) => {
     // Use tenant ID for authenticated requests, IP for others
     const tenantId = (request as unknown as { tenantId?: string }).tenantId;
@@ -198,7 +198,7 @@ fastify.get('/health/live', async () => {
 fastify.get('/health/ready', async (request, reply) => {
   const checks = {
     database: await checkDatabaseHealth(),
-    redis: redis.status === 'ready',
+    redis: redis ? redis.status === 'ready' : true,
     clamav: await checkClamAVHealth(),
   };
 
@@ -248,7 +248,9 @@ registerWebAuthnRoutes(fastify, pool);
 await registerSamlRoutes(fastify);
 
 // Initialize WebSocket server for real-time events (await to ensure Redis adapter connects)
-await initializeWebSocket(fastify.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);
+if (!isTest) {
+  await initializeWebSocket(fastify.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);
+}
 
 // ============================================================
 // STRIPE WEBHOOK ROUTE
@@ -276,29 +278,33 @@ fastify.post('/billing/webhook', async (request, reply) => {
 // GRACEFUL SHUTDOWN
 // ============================================================
 
-const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+if (!isTest) {
+  const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
 
-for (const signal of signals) {
-  process.on(signal, async () => {
-    logger.info({ signal }, 'Received shutdown signal');
+  for (const signal of signals) {
+    process.on(signal, async () => {
+      logger.info({ signal }, 'Received shutdown signal');
 
-    // Close server
-    await fastify.close();
-    logger.info('Server closed');
+      // Close server
+      await fastify.close();
+      logger.info('Server closed');
 
-    // Close orchestrator (FlowProducer Redis connection)
-    await closeOrchestrator();
-    logger.info('Orchestrator closed');
+      // Close orchestrator (FlowProducer Redis connection)
+      await closeOrchestrator();
+      logger.info('Orchestrator closed');
 
-    // Close Redis
-    await redis.quit();
-    logger.info('Redis connection closed');
+      // Close Redis
+      if (redis) {
+        await redis.quit();
+        logger.info('Redis connection closed');
+      }
 
-    // Close database pool
-    await closeDatabasePool();
+      // Close database pool
+      await closeDatabasePool();
 
-    process.exit(0);
-  });
+      process.exit(0);
+    });
+  }
 }
 
 // ============================================================
@@ -331,4 +337,10 @@ async function start() {
   }
 }
 
-start();
+export async function build() {
+  return fastify;
+}
+
+if (!isTest) {
+  void start();
+}
