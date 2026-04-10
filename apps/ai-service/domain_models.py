@@ -317,22 +317,26 @@ def validate_clause_type(value: str) -> ClauseType:
 
 def validate_risk_level(value: str) -> RiskLevel:
     """Validate risk level string"""
-    try:
-        return RiskLevel(value.lower())
-    except ValueError:
-        # Map numeric scores to levels
-        if isinstance(value, (int, float)):
-            if value >= 0.8:
-                return RiskLevel.CRITICAL
-            elif value >= 0.6:
-                return RiskLevel.HIGH
-            elif value >= 0.4:
-                return RiskLevel.MEDIUM
-            elif value >= 0.2:
-                return RiskLevel.LOW
-            else:
-                return RiskLevel.INFO
-        return RiskLevel.MEDIUM
+    # Map numeric scores to levels
+    if isinstance(value, (int, float)):
+        if value >= 0.8:
+            return RiskLevel.CRITICAL
+        elif value >= 0.6:
+            return RiskLevel.HIGH
+        elif value >= 0.4:
+            return RiskLevel.MEDIUM
+        elif value >= 0.2:
+            return RiskLevel.LOW
+        else:
+            return RiskLevel.INFO
+
+    if isinstance(value, str):
+        try:
+            return RiskLevel(value.lower())
+        except ValueError:
+            return RiskLevel.MEDIUM
+
+    return RiskLevel.MEDIUM
 
 
 def validate_jurisdiction(value: str) -> Optional[Jurisdiction]:

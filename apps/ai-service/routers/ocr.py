@@ -174,7 +174,7 @@ async def perform_ocr(
         )
     
     # Select engine
-    selected_engine = engine if engine in available_engines else available_engines[0]
+    selected_engine = str(engine if engine in available_engines else available_engines[0])
     
     # Perform OCR with retry wrapper for transient failures
     text = ""

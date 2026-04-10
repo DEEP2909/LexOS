@@ -2631,7 +2631,7 @@ app.addHook('preHandler', (req, reply, done) => {
 ## 16.4 Coverage Requirements
 
 - **Minimum (Node)**: 50% line coverage
-- **Minimum (Python)**: 30% line coverage (structural exclusions in `.coveragerc`)
+- **Minimum (Python)**: 70% line coverage (structural exclusions in `.coveragerc`)
 - **Target**: 80% line coverage
 - **Critical Paths**: 90%+ coverage
 

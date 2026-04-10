@@ -124,7 +124,7 @@ jobs:
           cd apps/ai-service
           COVERAGE=$(python -c "import json; d=json.load(open('coverage.json')); print(d['totals']['percent_covered'])")
           echo "Coverage: $COVERAGE%"
-          python -c "import sys; sys.exit(0 if $COVERAGE >= 30 else 1)"
+          python -c "import sys; sys.exit(0 if $COVERAGE >= 70 else 1)"
 
       - name: Audit dependencies
         run: |
