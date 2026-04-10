@@ -153,6 +153,43 @@ export async function generateRefreshToken(payload: {
   return token;
 }
 
+// Backward-compatible aliases used by legacy tests and older call sites
+export async function createAccessToken(payload: {
+  sub: string;
+  tenantId: string;
+  email: string;
+  role: string;
+}): Promise<string> {
+  return generateAccessToken(payload);
+}
+
+export async function createRefreshToken(
+  payloadOrSub:
+    | string
+    | {
+        sub: string;
+        tenantId: string;
+        email: string;
+        role: string;
+        tokenId?: string;
+      }
+): Promise<string> {
+  if (typeof payloadOrSub === 'string') {
+    return generateRefreshToken({
+      sub: payloadOrSub,
+      tenantId: 'legacy-tenant',
+      email: 'legacy@example.com',
+      role: 'attorney',
+      tokenId: crypto.randomUUID(),
+    });
+  }
+
+  return generateRefreshToken({
+    ...payloadOrSub,
+    tokenId: payloadOrSub.tokenId ?? crypto.randomUUID(),
+  });
+}
+
 // ============================================================
 // TOKEN VERIFICATION
 // ============================================================

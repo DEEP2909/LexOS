@@ -46,10 +46,10 @@ beforeAll(async () => {
   );
   
   await pool.query(
-    `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-     VALUES ($1, $2, $3, 'Test Client', 'M&A', $4)
+    `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+     VALUES ($1, $2, $3, $4, 'commercial_contract', 'Test Client', $5)
      ON CONFLICT DO NOTHING`,
-    [TEST_MATTER.id, TEST_TENANT.id, TEST_MATTER.name, TEST_ATTORNEY.id]
+    [TEST_MATTER.id, TEST_TENANT.id, 'UP-TEST-610', TEST_MATTER.name, TEST_ATTORNEY.id]
   );
   
   token = await createAccessToken({
@@ -291,9 +291,9 @@ describe('Document Management', () => {
         [otherTenantId]
       );
       await pool.query(
-        `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-         VALUES ($1, $2, 'Other Matter', 'Other', 'Other', $3) ON CONFLICT DO NOTHING`,
-        ['00000000-0000-0000-0000-000000000697', otherTenantId, TEST_ATTORNEY.id]
+        `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+         VALUES ($1, $2, $3, $4, 'commercial_contract', 'Other', $5) ON CONFLICT DO NOTHING`,
+        ['00000000-0000-0000-0000-000000000697', otherTenantId, 'OTHER-697', 'Other Matter', TEST_ATTORNEY.id]
       );
       await pool.query(
         `INSERT INTO documents (id, tenant_id, matter_id, file_name, file_path, status)
@@ -784,10 +784,10 @@ describe('Bulk Document Operations', () => {
     beforeAll(async () => {
       targetMatterId = '00000000-0000-0000-0000-000000000680';
       await pool.query(
-        `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-         VALUES ($1, $2, 'Target Matter', 'Client', 'Other', $3)
+        `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+         VALUES ($1, $2, $3, $4, 'commercial_contract', 'Client', $5)
          ON CONFLICT DO NOTHING`,
-        [targetMatterId, TEST_TENANT.id, TEST_ATTORNEY.id]
+        [targetMatterId, TEST_TENANT.id, 'TARGET-680', 'Target Matter', TEST_ATTORNEY.id]
       );
     });
     

@@ -109,6 +109,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   mfaCode: z.string().length(6).optional(),
+  tenantSlug: z.string().min(1).optional(),
 });
 
 const registerSchema = z.object({
@@ -122,10 +123,15 @@ const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1),
-  password: z.string().min(12),
-});
+const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1),
+    password: z.string().min(12).optional(),
+    newPassword: z.string().min(12).optional(),
+  })
+  .refine((data) => Boolean(data.password || data.newPassword), {
+    message: 'Password is required',
+  });
 
 const matterCreateSchema = z.object({
   matterCode: z.string().min(1),
@@ -162,9 +168,16 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // ============================================================
 
   // POST /auth/login
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', {
+    config: {
+      rateLimit: {
+        max: rateLimits.auth.requests,
+        timeWindow: rateLimits.auth.windowMs,
+      },
+    },
+  }, async (request, reply) => {
     const body = loginSchema.parse(request.body);
-    const { email, password, mfaCode } = body;
+    const { email, password, mfaCode, tenantSlug } = body;
 
     // Find attorney by email
     const attorney = await queryOne<{
@@ -179,10 +192,14 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       failed_login_attempts: number;
       locked_until: Date | null;
       status: string;
+      tenant_slug: string;
     }>(
-      `SELECT id, tenant_id, email, display_name, role, password_hash, 
-              mfa_enabled, mfa_secret, failed_login_attempts, locked_until, status
-       FROM attorneys WHERE email = $1`,
+      `SELECT a.id, a.tenant_id, a.email, a.display_name, a.role, a.password_hash, 
+              a.mfa_enabled, a.mfa_secret, a.failed_login_attempts, a.locked_until, a.status,
+              t.slug as tenant_slug
+       FROM attorneys a
+       JOIN tenants t ON t.id = a.tenant_id
+       WHERE a.email = $1`,
       [email.toLowerCase()]
     );
 
@@ -193,9 +210,16 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
 
+    if (tenantSlug && attorney.tenant_slug !== tenantSlug) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+      });
+    }
+
     // Check if account is locked
     if (attorney.locked_until && new Date(attorney.locked_until) > new Date()) {
-      return reply.status(401).send({
+      return reply.status(423).send({
         success: false,
         error: { code: 'ACCOUNT_LOCKED', message: 'Account is temporarily locked' },
       });
@@ -492,10 +516,11 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
   // POST /auth/reset-password
   fastify.post('/auth/reset-password', async (request, reply) => {
-    const { token, password } = resetPasswordSchema.parse(request.body);
+    const { token, password, newPassword } = resetPasswordSchema.parse(request.body);
+    const effectivePassword = newPassword ?? password ?? '';
 
     // Validate password policy
-    const validation = validatePasswordPolicy(password);
+    const validation = validatePasswordPolicy(effectivePassword);
     if (!validation.valid) {
       return reply.status(400).send({
         success: false,
@@ -523,7 +548,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(effectivePassword);
 
     await withTransaction(async (tx) => {
       // Update password
@@ -586,6 +611,28 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       data: {
         attorney,
         tenant,
+      },
+    };
+  });
+
+  // POST /auth/mfa/setup
+  fastify.post('/auth/mfa/setup', { preHandler: authenticateRequest }, async (request) => {
+    const authReq = request as AuthenticatedRequest;
+    const secret = generateSecureToken(20).toUpperCase();
+    const issuer = encodeURIComponent('LexOS');
+    const label = encodeURIComponent(authReq.tokenPayload.email);
+    const qrCodeUrl = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}`;
+
+    await query(
+      `UPDATE attorneys SET mfa_secret = $1 WHERE id = $2 AND tenant_id = $3`,
+      [secret, authReq.attorneyId, authReq.tenantId]
+    );
+
+    return {
+      success: true,
+      data: {
+        secret,
+        qrCodeUrl,
       },
     };
   });

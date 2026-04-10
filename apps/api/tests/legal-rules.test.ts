@@ -618,10 +618,10 @@ describe('Matter Jurisdiction Integration', () => {
   beforeAll(async () => {
     matterId = '00000000-0000-0000-0000-000000000510';
     await pool.query(
-      `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id, jurisdiction)
-       VALUES ($1, $2, 'Legal Rules Matter', 'Test Client', 'M&A', $3, 'CA')
+      `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id, governing_law_state)
+       VALUES ($1, $2, $3, $4, 'employment', 'Test Client', $5, 'CA')
        ON CONFLICT DO NOTHING`,
-      [matterId, TEST_TENANT.id, TEST_ATTORNEY.id]
+      [matterId, TEST_TENANT.id, 'LR-TEST-510', 'Legal Rules Matter', TEST_ATTORNEY.id]
     );
   });
   

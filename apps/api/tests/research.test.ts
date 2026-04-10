@@ -45,10 +45,10 @@ beforeAll(async () => {
   );
   
   await pool.query(
-    `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-     VALUES ($1, $2, $3, 'Test Client', 'M&A', $4)
+    `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+     VALUES ($1, $2, $3, $4, 'commercial_contract', 'Test Client', $5)
      ON CONFLICT DO NOTHING`,
-    [TEST_MATTER.id, TEST_TENANT.id, TEST_MATTER.name, TEST_ATTORNEY.id]
+    [TEST_MATTER.id, TEST_TENANT.id, 'RS-TEST-410', TEST_MATTER.name, TEST_ATTORNEY.id]
   );
   
   token = await createAccessToken({
@@ -840,10 +840,10 @@ describe('Legal Rules Integration', () => {
     // Create California matter
     const matterId = '00000000-0000-0000-0000-000000000460';
     await pool.query(
-      `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id, jurisdiction)
-       VALUES ($1, $2, 'CA Test', 'Test Client', 'Employment', $3, 'CA')
+      `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id, governing_law_state)
+       VALUES ($1, $2, $3, $4, 'employment', 'Test Client', $5, 'CA')
        ON CONFLICT DO NOTHING`,
-      [matterId, TEST_TENANT.id, TEST_ATTORNEY.id]
+      [matterId, TEST_TENANT.id, 'CA-TEST-460', 'CA Test', TEST_ATTORNEY.id]
     );
     
     // Create document with non-compete

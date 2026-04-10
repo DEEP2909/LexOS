@@ -73,7 +73,7 @@ describe('Input Validation', () => {
       it(`should reject invalid email: "${email.substring(0, 50)}"`, async () => {
         const response = await app.inject({
           method: 'POST',
-          url: '/api/auth/login',
+          url: '/auth/login',
           payload: { email, password: 'Password123!' },
         });
         
@@ -112,7 +112,7 @@ describe('Input Validation', () => {
       it(`should reject weak password: "${password}"`, async () => {
         const response = await app.inject({
           method: 'POST',
-          url: '/api/auth/reset-password',
+          url: '/auth/reset-password',
           payload: {
             token: 'valid-token',
             password,
@@ -395,10 +395,10 @@ describe('Edge Cases', () => {
     it('should handle emoji in notes', async () => {
       const matterId = '00000000-0000-0000-0000-000000000710';
       await pool.query(
-        `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-         VALUES ($1, $2, 'Emoji Test', 'Test', 'M&A', $3)
+        `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+         VALUES ($1, $2, $3, $4, 'commercial_contract', 'Test', $5)
          ON CONFLICT DO NOTHING`,
-        [matterId, TEST_TENANT.id, TEST_ATTORNEY.id]
+        [matterId, TEST_TENANT.id, 'VAL-710', 'Emoji Test', TEST_ATTORNEY.id]
       );
       
       const response = await app.inject({
@@ -443,10 +443,10 @@ describe('Edge Cases', () => {
     it('should store and return UTC timestamps', async () => {
       const matterId = '00000000-0000-0000-0000-000000000720';
       await pool.query(
-        `INSERT INTO matters (id, tenant_id, name, client_name, practice_area, lead_attorney_id)
-         VALUES ($1, $2, 'TZ Test', 'Test', 'M&A', $3)
+        `INSERT INTO matters (id, tenant_id, matter_code, matter_name, matter_type, client_name, lead_attorney_id)
+         VALUES ($1, $2, $3, $4, 'commercial_contract', 'Test', $5)
          ON CONFLICT DO NOTHING`,
-        [matterId, TEST_TENANT.id, TEST_ATTORNEY.id]
+        [matterId, TEST_TENANT.id, 'VAL-720', 'TZ Test', TEST_ATTORNEY.id]
       );
       
       const response = await app.inject({
@@ -514,7 +514,7 @@ describe('Error Handling', () => {
     it('should return 405 for wrong HTTP method', async () => {
       const response = await app.inject({
         method: 'PUT',
-        url: '/api/auth/login',
+        url: '/auth/login',
         payload: {},
       });
       
@@ -526,7 +526,7 @@ describe('Error Handling', () => {
       const requests = Array(50).fill(null).map(() =>
         app.inject({
           method: 'POST',
-          url: '/api/auth/login',
+          url: '/auth/login',
           payload: { email: 'test@test.com', password: 'wrong' },
         })
       );

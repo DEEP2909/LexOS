@@ -117,11 +117,16 @@ export function decrypt(encrypted: string): string {
 
 /**
  * Generate a cryptographically secure random token
- * Returns URL-safe base64 string
+ * Returns a hex string
  */
 export function generateSecureToken(bytes = TOKEN_BYTES): string {
-  return crypto.randomBytes(bytes).toString('base64url');
+  return crypto.randomBytes(bytes).toString('hex');
 }
+
+// Backward-compatible aliases used by legacy tests
+export const generateToken = generateSecureToken;
+export const encryptField = encrypt;
+export const decryptField = decrypt;
 
 /**
  * Generate a SHA-256 hash of a token (for storage)
