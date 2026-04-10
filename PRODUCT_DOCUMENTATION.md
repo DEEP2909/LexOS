@@ -940,8 +940,8 @@ CREATE TABLE tenants (
     plan VARCHAR(50) DEFAULT 'starter',
     subscription_status VARCHAR(50) DEFAULT 'trialing',
     trial_ends_at TIMESTAMPTZ,
-    stripe_customer_id VARCHAR(255),
-    stripe_subscription_id VARCHAR(255),
+    stripe_customer_id VARCHAR(255) UNIQUE,
+    stripe_subscription_id VARCHAR(255) UNIQUE,
     settings JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

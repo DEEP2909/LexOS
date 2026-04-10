@@ -108,12 +108,59 @@ exports.up = (pgm) => {
   // Add Stripe-related columns to tenants table if not exists
   pgm.sql(`
     ALTER TABLE tenants 
-    ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE,
-    ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT UNIQUE,
+    ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
+    ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
     ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'none',
     ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS billing_email TEXT,
     ADD COLUMN IF NOT EXISTS billing_status TEXT DEFAULT 'active'
+  `);
+
+  // Enforce uniqueness separately so it is not skipped when columns already exist.
+  pgm.sql(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT stripe_customer_id
+        FROM tenants
+        WHERE stripe_customer_id IS NOT NULL
+        GROUP BY stripe_customer_id
+        HAVING COUNT(*) > 1
+      ) THEN
+        RAISE EXCEPTION 'Duplicate stripe_customer_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenants_stripe_customer_id_unique'
+          AND conrelid = 'tenants'::regclass
+      ) THEN
+        ALTER TABLE tenants
+          ADD CONSTRAINT tenants_stripe_customer_id_unique UNIQUE (stripe_customer_id);
+      END IF;
+
+      IF EXISTS (
+        SELECT stripe_subscription_id
+        FROM tenants
+        WHERE stripe_subscription_id IS NOT NULL
+        GROUP BY stripe_subscription_id
+        HAVING COUNT(*) > 1
+      ) THEN
+        RAISE EXCEPTION 'Duplicate stripe_subscription_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenants_stripe_subscription_id_unique'
+          AND conrelid = 'tenants'::regclass
+      ) THEN
+        ALTER TABLE tenants
+          ADD CONSTRAINT tenants_stripe_subscription_id_unique UNIQUE (stripe_subscription_id);
+      END IF;
+    END
+    $$;
   `);
   
   pgm.createIndex('tenants', 'stripe_customer_id', {
