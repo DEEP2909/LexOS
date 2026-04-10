@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 4: Admin, Billing, SCIM Tests
+ * EvidentIS API Test Suite - Part 4: Admin, Billing, SCIM Tests
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';

@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 6: Legal Rules, State Coverage, Federal Laws
+ * EvidentIS API Test Suite - Part 6: Legal Rules, State Coverage, Federal Laws
  * Tests for comprehensive USA legal coverage across all 50 states + DC + federal
  */
 

@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Risk Assessment Router
+EvidentIS AI Service - Risk Assessment Router
 Assess legal risk of document clauses using playbook rules.
 """
 

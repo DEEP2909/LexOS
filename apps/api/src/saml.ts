@@ -1,4 +1,4 @@
-// LexOS - SAML 2.0 Service Provider Implementation
+// EvidentIS - SAML 2.0 Service Provider Implementation
 import { type FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
@@ -80,13 +80,13 @@ export function generateSPMetadata(
                               isDefault="true"/>
   </SPSSODescriptor>
   <Organization>
-    <OrganizationName xml:lang="en">LexOS</OrganizationName>
-    <OrganizationDisplayName xml:lang="en">LexOS Legal Platform</OrganizationDisplayName>
+    <OrganizationName xml:lang="en">EvidentIS</OrganizationName>
+    <OrganizationDisplayName xml:lang="en">EvidentIS Legal Platform</OrganizationDisplayName>
     <OrganizationURL xml:lang="en">${baseUrl}</OrganizationURL>
   </Organization>
   <ContactPerson contactType="technical">
     <GivenName>Support</GivenName>
-    <EmailAddress>support@lexos.io</EmailAddress>
+    <EmailAddress>support@evidentis.io</EmailAddress>
   </ContactPerson>
 </EntityDescriptor>`;
 }

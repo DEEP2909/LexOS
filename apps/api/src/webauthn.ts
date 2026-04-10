@@ -1,5 +1,5 @@
 /**
- * LexOS WebAuthn/Passkey Implementation
+ * EvidentIS WebAuthn/Passkey Implementation
  * FIDO2/WebAuthn support for passwordless authentication
  */
 
@@ -65,7 +65,7 @@ declare module 'fastify' {
 // CONFIGURATION
 // ============================================================================
 
-const rpName = 'LexOS Legal Platform';
+const rpName = 'EvidentIS Legal Platform';
 const rpID = process.env.WEBAUTHN_RP_ID || 'localhost';
 const origin = process.env.WEBAUTHN_ORIGIN || `https://${rpID}`;
 

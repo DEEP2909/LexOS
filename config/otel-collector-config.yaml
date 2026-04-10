@@ -1,4 +1,4 @@
-# LexOS OpenTelemetry Collector Configuration
+# EvidentIS OpenTelemetry Collector Configuration
 # Collects traces, metrics, and logs from all services
 
 receivers:
@@ -14,13 +14,13 @@ receivers:
   prometheus:
     config:
       scrape_configs:
-        - job_name: 'lexos-api'
+        - job_name: 'evidentis-api'
           scrape_interval: 15s
           static_configs:
             - targets: ['api:3001']
           metrics_path: /metrics
         
-        - job_name: 'lexos-ai-service'
+        - job_name: 'evidentis-ai-service'
           scrape_interval: 15s
           static_configs:
             - targets: ['ai-service:8000']
@@ -67,7 +67,7 @@ processors:
         value: ${ENVIRONMENT:-production}
         action: upsert
       - key: service.namespace
-        value: lexos
+        value: evidentis
         action: upsert
       - key: deployment.environment
         value: ${ENVIRONMENT:-production}
@@ -116,7 +116,7 @@ exporters:
   # Prometheus exporter for metrics
   prometheus:
     endpoint: "0.0.0.0:8889"
-    namespace: lexos
+    namespace: evidentis
     const_labels:
       environment: ${ENVIRONMENT:-production}
 

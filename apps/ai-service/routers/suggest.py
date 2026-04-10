@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Redline Suggestions Router
+EvidentIS AI Service - Redline Suggestions Router
 Generate intelligent contract redline suggestions.
 """
 

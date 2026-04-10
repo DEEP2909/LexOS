@@ -1,5 +1,5 @@
 /**
- * LexOS Audit Logging
+ * EvidentIS Audit Logging
  * Comprehensive audit trail for compliance and security
  */
 

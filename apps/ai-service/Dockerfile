@@ -1,5 +1,5 @@
 # ============================================================
-# LexOS AI Service Dockerfile
+# EvidentIS AI Service Dockerfile
 # Python FastAPI AI/ML Service
 # ============================================================
 

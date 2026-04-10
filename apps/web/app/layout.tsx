@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "LexOS - Legal AI Platform",
+  title: "EvidentIS - Legal AI Platform",
   description: "AI-powered legal workflow automation for law firms",
   icons: {
     icon: "/favicon.ico",

@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 7: Document Upload, Processing Pipeline, File Handling
+ * EvidentIS API Test Suite - Part 7: Document Upload, Processing Pipeline, File Handling
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';

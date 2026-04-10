@@ -1,4 +1,4 @@
-# LexOS AI Worker Tasks - Package Init
+# EvidentIS AI Worker Tasks - Package Init
 from .batch_embed import batch_embed_documents, embed_new_document, retry_failed, reindex_matter_documents
 from .report_gen import generate_matter_report, generate_weekly_reports, generate_monthly_reports
 from .obligation_remind import send_daily_reminders, check_overdue, send_obligation_reminder

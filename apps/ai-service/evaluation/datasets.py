@@ -1,5 +1,5 @@
 """
-LexOS Golden Datasets
+EvidentIS Golden Datasets
 Test cases and ground truth data for AI evaluation
 """
 
@@ -242,7 +242,7 @@ def create_clause_extraction_dataset() -> GoldenDataset:
         description="Golden dataset for clause extraction evaluation",
         cases=cases,
         metadata={
-            "created_by": "LexOS Team",
+            "created_by": "EvidentIS Team",
             "last_updated": "2026-04-08",
         },
     )

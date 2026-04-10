@@ -1,5 +1,5 @@
 /**
- * LexOS Worker Entry Point
+ * EvidentIS Worker Entry Point
  * Starts all BullMQ workers for async document processing pipeline
  */
 
@@ -68,7 +68,7 @@ async function updateQueueMetrics(): Promise<void> {
   }
 }
 
-logger.info('Starting LexOS worker process...');
+logger.info('Starting EvidentIS worker process...');
 
 // Start all BullMQ workers
 startWorkers();

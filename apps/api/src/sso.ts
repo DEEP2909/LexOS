@@ -1,4 +1,4 @@
-// LexOS - OIDC/OAuth2 PKCE SSO Implementation
+// EvidentIS - OIDC/OAuth2 PKCE SSO Implementation
 import { type FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as jose from 'jose';
 import { randomBytes, createHash } from 'crypto';
@@ -400,7 +400,7 @@ export async function verifyDomain(
   domain: string
 ): Promise<{ verified: boolean; verificationRecord: string }> {
   const verificationToken = randomBytes(16).toString('hex');
-  const verificationRecord = `lexos-verify=${verificationToken}`;
+  const verificationRecord = `evidentis-verify=${verificationToken}`;
 
   await pool.query(
     `INSERT INTO sso_domains (tenant_id, domain, verification_token, verified, created_at)

@@ -1,11 +1,11 @@
 /**
- * LexOS Auth State Management
+ * EvidentIS Auth State Management
  * Zustand store for authentication state
  */
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Attorney } from "@lexos/shared";
+import type { Attorney } from "@evidentis/shared";
 import { auth, setTokens, clearTokens, loadTokens } from "./api";
 
 interface AuthState {
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: "lexos-auth",
+      name: "evidentis-auth",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         // Only persist user data, not loading states

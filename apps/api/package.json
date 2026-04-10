@@ -1,5 +1,5 @@
 {
-  "name": "@lexos/api",
+  "name": "@evidentis/api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -63,7 +63,7 @@
     "axios": "^1.7.7",
     "mammoth": "^1.8.0",
     "zod": "^3.23.8",
-    "@lexos/shared": "*"
+    "@evidentis/shared": "*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",

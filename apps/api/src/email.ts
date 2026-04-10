@@ -1,5 +1,5 @@
 /**
- * LexOS Email Service
+ * EvidentIS Email Service
  * Email sending with HTML templates
  */
 
@@ -113,8 +113,8 @@ function wrapTemplate(content: string): string {
       ${content}
     </div>
     <div class="footer">
-      <p>This email was sent by LexOS. If you didn't request this, please ignore it.</p>
-      <p>© ${new Date().getFullYear()} LexOS. All rights reserved.</p>
+      <p>This email was sent by EvidentIS. If you didn't request this, please ignore it.</p>
+      <p>© ${new Date().getFullYear()} EvidentIS. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -134,20 +134,20 @@ export async function sendPasswordResetEmail(
   const html = wrapTemplate(`
     <h2>Reset Your Password</h2>
     <p>Hi ${attorneyName},</p>
-    <p>We received a request to reset the password for your LexOS account. Click the button below to set a new password:</p>
+    <p>We received a request to reset the password for your EvidentIS account. Click the button below to set a new password:</p>
     <p style="text-align: center;">
       <a href="${resetUrl}" class="button">Reset Password</a>
     </p>
     <p>This link will expire in <strong>1 hour</strong>.</p>
     <p>If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
     <div class="warning">
-      <strong>Security Notice:</strong> Never share this link with anyone. LexOS support will never ask for your password.
+      <strong>Security Notice:</strong> Never share this link with anyone. EvidentIS support will never ask for your password.
     </div>
   `);
 
   await sendEmail({
     to: email,
-    subject: 'Reset Your LexOS Password',
+    subject: 'Reset Your EvidentIS Password',
     html,
   });
 }
@@ -159,9 +159,9 @@ export async function sendInvitationEmail(
   inviterName: string
 ): Promise<void> {
   const html = wrapTemplate(`
-    <h2>You've Been Invited to LexOS</h2>
+    <h2>You've Been Invited to EvidentIS</h2>
     <p>Hi there,</p>
-    <p><strong>${inviterName}</strong> has invited you to join <strong>${firmName}</strong> on LexOS, the AI-powered legal intelligence platform.</p>
+    <p><strong>${inviterName}</strong> has invited you to join <strong>${firmName}</strong> on EvidentIS, the AI-powered legal intelligence platform.</p>
     <p style="text-align: center;">
       <a href="${inviteUrl}" class="button">Accept Invitation</a>
     </p>
@@ -171,7 +171,7 @@ export async function sendInvitationEmail(
 
   await sendEmail({
     to: email,
-    subject: `You're invited to join ${firmName} on LexOS`,
+    subject: `You're invited to join ${firmName} on EvidentIS`,
     html,
   });
 }
@@ -183,7 +183,7 @@ export async function sendMFAEnabledEmail(
   const html = wrapTemplate(`
     <h2>Two-Factor Authentication Enabled</h2>
     <p>Hi ${attorneyName},</p>
-    <p>Two-factor authentication has been successfully enabled for your LexOS account. Your account is now more secure.</p>
+    <p>Two-factor authentication has been successfully enabled for your EvidentIS account. Your account is now more secure.</p>
     <p>From now on, you'll need to enter a code from your authenticator app when signing in.</p>
     <div class="warning">
       <strong>Important:</strong> Make sure you've saved your recovery codes in a safe place. You'll need them if you lose access to your authenticator app.
@@ -193,7 +193,7 @@ export async function sendMFAEnabledEmail(
 
   await sendEmail({
     to: email,
-    subject: 'Two-Factor Authentication Enabled on LexOS',
+    subject: 'Two-Factor Authentication Enabled on EvidentIS',
     html,
   });
 }
@@ -217,7 +217,7 @@ export async function sendObligationReminderEmail(
       <p style="margin: 8px 0 0 0;"><strong>Due Date:</strong> ${deadlineDate} (${daysUntilDue} days remaining)</p>
     </div>
     <p style="text-align: center;">
-      <a href="${config.FRONTEND_URL}/matters" class="button">View in LexOS</a>
+      <a href="${config.FRONTEND_URL}/matters" class="button">View in EvidentIS</a>
     </p>
   `);
 
@@ -302,7 +302,7 @@ export async function sendPaymentFailedEmail(
 
   const html = wrapTemplate(`
     <h2>Payment Failed</h2>
-    <p>We were unable to process your latest LexOS invoice payment.</p>
+    <p>We were unable to process your latest EvidentIS invoice payment.</p>
     <ul>
       <li><strong>Amount Due:</strong> ${amountLabel}</li>
     </ul>
@@ -316,7 +316,7 @@ export async function sendPaymentFailedEmail(
 
   await sendEmail({
     to: adminEmail,
-    subject: `Action Required: LexOS Payment Failed (${amountLabel})`,
+    subject: `Action Required: EvidentIS Payment Failed (${amountLabel})`,
     html,
   });
 }

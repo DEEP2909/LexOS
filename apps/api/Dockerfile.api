@@ -1,5 +1,5 @@
 # ============================================================
-# LexOS API Dockerfile
+# EvidentIS API Dockerfile
 # Node.js Fastify API Server
 # ============================================================
 
@@ -13,15 +13,15 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 
 # Install dependencies
-RUN npm ci --workspace=@lexos/shared --workspace=@lexos/api
+RUN npm ci --workspace=@evidentis/shared --workspace=@evidentis/api
 
 # Copy source code
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
 # Build shared package first, then API
-RUN npm run build -w @lexos/shared
-RUN npm run build -w @lexos/api
+RUN npm run build -w @evidentis/shared
+RUN npm run build -w @evidentis/api
 
 # ============================================================
 # Production image

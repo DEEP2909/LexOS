@@ -1,5 +1,5 @@
 """
-LexOS Scoring Functions
+EvidentIS Scoring Functions
 Specialized scoring metrics for legal AI tasks
 """
 

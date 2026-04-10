@@ -396,7 +396,7 @@ export default function BillingPage() {
                     </Button>
                   ) : plan.tier === "enterprise" ? (
                     <Button className="w-full" variant="outline" asChild>
-                      <a href="mailto:sales@lexos.ai">
+                      <a href="mailto:sales@evidentis.tech">
                         Contact Sales
                         <ArrowUpRight className="h-4 w-4 ml-2" />
                       </a>

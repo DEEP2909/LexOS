@@ -1,4 +1,4 @@
-# LexOS AI Service
+# EvidentIS AI Service
 # Python FastAPI service for AI/ML capabilities
 
 # Core Framework

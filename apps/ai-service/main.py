@@ -1,5 +1,5 @@
 """
-LexOS AI Service
+EvidentIS AI Service
 FastAPI application for AI/ML capabilities including OCR, embeddings, 
 clause extraction, risk assessment, and semantic research.
 """
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     """Application lifecycle management - load models on startup."""
     global model_registry
     
-    logger.info("Starting LexOS AI Service...")
+    logger.info("Starting EvidentIS AI Service...")
     logger.info(f"Embedding model: {settings.embedding_model}")
     logger.info(f"OCR engines: {settings.ocr_engine_list}")
     logger.info(f"LLM model: {settings.ollama_model_extract}")
@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="LexOS AI Service",
+    title="EvidentIS AI Service",
     description="AI/ML service for legal document analysis",
     version="1.0.0",
     lifespan=lifespan,
@@ -106,7 +106,7 @@ app.include_router(obligations.router, prefix="/extract-obligations", tags=["Obl
 async def root() -> Dict[str, Any]:
     """Root endpoint with service info."""
     return {
-        "service": "LexOS AI Service",
+        "service": "EvidentIS AI Service",
         "version": "1.0.0",
         "status": "running",
         "models": {

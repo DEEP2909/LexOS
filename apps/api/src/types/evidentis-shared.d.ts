@@ -1,4 +1,4 @@
-declare module '@lexos/shared' {
+declare module '@evidentis/shared' {
   export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
   export interface Attorney {

@@ -1,4 +1,4 @@
-# LexOS AI Worker - Celery Application
+# EvidentIS AI Worker - Celery Application
 # Handles async batch processing, report generation, and scheduled tasks
 
 import os
@@ -11,7 +11,7 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/1')
 
 # Create Celery app
 app = Celery(
-    'lexos_worker',
+    'evidentis_worker',
     broker=REDIS_URL,
     backend=REDIS_URL,
     include=[

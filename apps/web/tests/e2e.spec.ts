@@ -1,5 +1,5 @@
 /**
- * LexOS E2E Test Suite - Playwright Tests
+ * EvidentIS E2E Test Suite - Playwright Tests
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -9,7 +9,7 @@ const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 // Test user credentials
 const TEST_USER = {
-  email: 'test@lexos.dev',
+  email: 'test@evidentis.dev',
   password: 'TestPassword123!',
 };
 
@@ -73,7 +73,7 @@ test.describe('Authentication', () => {
     // This test assumes MFA is enabled for the test user
     await page.goto(`${BASE_URL}/login`);
     
-    await page.fill('input[name="email"]', 'mfa-user@lexos.dev');
+    await page.fill('input[name="email"]', 'mfa-user@evidentis.dev');
     await page.fill('input[name="password"]', 'MfaPassword123!');
     await page.click('button[type="submit"]');
     
@@ -356,7 +356,7 @@ test.describe('Settings', () => {
 test.describe('Admin', () => {
   test.beforeEach(async ({ page }) => {
     // Login as admin
-    await login(page, 'admin@lexos.dev', 'AdminPassword123!');
+    await login(page, 'admin@evidentis.dev', 'AdminPassword123!');
     await page.goto(`${BASE_URL}/admin`);
   });
   
@@ -390,10 +390,10 @@ test.describe('Admin', () => {
 test.describe('Accessibility', () => {
   test('should have proper page titles', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await expect(page).toHaveTitle(/lexos|login/i);
+    await expect(page).toHaveTitle(/evidentis|login/i);
     
     await login(page);
-    await expect(page).toHaveTitle(/dashboard|lexos/i);
+    await expect(page).toHaveTitle(/dashboard|evidentis/i);
   });
   
   test('should have skip link', async ({ page }) => {

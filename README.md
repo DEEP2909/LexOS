@@ -1,11 +1,12 @@
-# LexOS - Enterprise Legal AI Platform
+# EvidentIS: Evidence-Based Intelligent Decision System
 
 <p align="center">
-  <img src="docs/assets/lexos-logo.png" alt="LexOS Logo" width="200"/>
+  <img src="docs/assets/evidentis-logo.png" alt="EvidentIS Logo" width="200"/>
 </p>
 
 <p align="center">
-  <strong>AI-Powered Contract Intelligence for USA Law Firms</strong>
+  <strong>AI-Powered Contract Intelligence for USA Law Firms</strong><br/>
+  <strong>Enterprise Legal AI Platform</strong>
 </p>
 
 <p align="center">
@@ -27,9 +28,11 @@
 
 ---
 
-## 🎯 What is LexOS?
+## 🎯 What is EvidentIS?
 
-LexOS is an enterprise-grade, multi-tenant Legal AI SaaS platform designed specifically for USA-based law firms. It transforms how attorneys handle contract review, legal research, and compliance monitoring through advanced AI capabilities.
+**EvidentIS** stands for **Evidence-Based Intelligent Decision System**.
+
+EvidentIS is an enterprise-grade, multi-tenant Legal AI SaaS platform designed specifically for USA-based law firms. It transforms how attorneys handle contract review, legal research, and compliance monitoring through advanced AI capabilities.
 
 ### The Problem We Solve
 
@@ -40,7 +43,7 @@ LexOS is an enterprise-grade, multi-tenant Legal AI SaaS platform designed speci
 
 ### Our Solution
 
-LexOS automates contract analysis, extracts key clauses, assesses risks against firm playbooks, tracks obligations, and provides AI-powered legal research—all while maintaining the highest security and compliance standards required by law firms.
+EvidentIS automates contract analysis, extracts key clauses, assesses risks against firm playbooks, tracks obligations, and provides AI-powered legal research—all while maintaining the highest security and compliance standards required by law firms.
 
 ---
 
@@ -107,8 +110,8 @@ LexOS automates contract analysis, extracts key clauses, assesses risks against 
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/lexos.git
-cd lexos
+git clone https://github.com/your-org/evidentis.git
+cd evidentis
 
 # Install dependencies
 npm install
@@ -132,7 +135,7 @@ npm run dev
 ### Build and Test Notes
 
 - The web app builds as a Next.js standalone bundle. `apps/web/public/.gitkeep` is committed so the Docker runner stage can always copy `/public`, and `apps/web/next.config.js` enables `.next/standalone`.
-- API tests use `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`. `apps/api/package.json` now pins node-pg-migrate to `../../db/migrations`, and CI runs `npm run migrate:up -w @lexos/api` before the Node test job so Postgres has the expected schema.
+- API tests use `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts`. `apps/api/package.json` now pins node-pg-migrate to `../../db/migrations`, and CI runs `npm run migrate:up -w @evidentis/api` before the Node test job so Postgres has the expected schema.
 - End-to-end `npm test --workspace=apps/api` still requires reachable Postgres and Redis test services.
 - AI tests use `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and should be run with Python 3.11.
 - The AI Docker image now installs Debian Trixie-compatible OpenGL runtime packages via `libgl1` in both Dockerfile stages.
@@ -148,7 +151,7 @@ npm run dev
 ### Demo Credentials
 
 ```
-Email: demo@lexos.ai
+Email: demo@evidentis.tech
 Password: Demo123!@#
 Firm: Demo Law Firm LLP
 ```
@@ -247,7 +250,7 @@ flowchart LR
 ## 📁 Project Structure
 
 ```
-lexos/
+evidentis/
 ├── apps/
 │   ├── api/                 # Fastify REST API (Node.js)
 │   │   ├── src/
@@ -447,15 +450,15 @@ OpenTelemetry traces exported to:
 
 This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
 
-© 2026 LexOS Inc. All rights reserved.
+© 2026 EvidentIS Inc. All rights reserved.
 
 ---
 
 ## 📞 Support
 
-- **Documentation**: [docs.lexos.ai](https://docs.lexos.ai)
-- **Email**: support@lexos.ai
-- **Enterprise Support**: enterprise@lexos.ai
+- **Documentation**: [docs.evidentis.tech](https://docs.evidentis.tech)
+- **Email**: support@evidentis.tech
+- **Enterprise Support**: enterprise@evidentis.tech
 
 ---
 

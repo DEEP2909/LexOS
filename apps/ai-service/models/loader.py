@@ -1,5 +1,5 @@
 """
-LexOS Model Registry
+EvidentIS Model Registry
 Manages loading and access to all AI/ML models.
 """
 

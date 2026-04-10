@@ -1,5 +1,5 @@
 /**
- * LexOS SCIM 2.0 Endpoints
+ * EvidentIS SCIM 2.0 Endpoints
  * Implements RFC 7643 (Core Schema) and RFC 7644 (Protocol)
  * Compatible with Okta and Azure AD SCIM provisioning
  */
@@ -179,7 +179,7 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
   app.get('/scim/v2/ServiceProviderConfig', async (request, reply) => {
     return {
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
-      documentationUri: 'https://lexos.law/docs/scim',
+      documentationUri: 'https://evidentis.law/docs/scim',
       patch: { supported: true },
       bulk: {
         supported: false,
@@ -570,7 +570,7 @@ export async function scimRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = (request as any).tenantId;
     const query = request.query as { startIndex?: string; count?: string };
     
-    // LexOS uses roles, not explicit groups, but we expose them as SCIM groups
+    // EvidentIS uses roles, not explicit groups, but we expose them as SCIM groups
     const roles = ['admin', 'partner', 'attorney', 'paralegal', 'client_portal'];
     
     const resources = roles.map((role, index) => ({

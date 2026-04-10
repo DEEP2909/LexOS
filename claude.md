@@ -1,4 +1,4 @@
-# LexOS - Enterprise Legal AI Platform
+# EvidentIS - Enterprise Legal AI Platform
 ## Claude Context File (Updated: 2026-04-10, Session 24)
 
 ## Project Status: ✅ ALL ISSUES RESOLVED (Round 24)
@@ -255,7 +255,7 @@
 
 | Issue | Severity | Description | Status |
 |-------|----------|-------------|--------|
-| #1 | Critical | `@lexos/web` lint bootstrap broke with ESLint 9 + Next 14 mismatch | ✅ Pinned `eslint@8.57.0` and `eslint-config-next@14.2.13`; lint command now initializes correctly |
+| #1 | Critical | `@evidentis/web` lint bootstrap broke with ESLint 9 + Next 14 mismatch | ✅ Pinned `eslint@8.57.0` and `eslint-config-next@14.2.13`; lint command now initializes correctly |
 | #2 | Major | AI service Ruff checks still failing (`E702`, `F821`, `F841`, `F401`) | ✅ Normalized `Jurisdiction` enum formatting and fixed residual unused/typing issues; `python -m ruff check .` passes |
 | #3 | Major | API typecheck failure in websocket shutdown (`io` possibly null) | ✅ Captured non-null socket server instance before async close; API typecheck passes |
 | #4 | Major | Web Biome run emitted blocking style/a11y diagnostics | ✅ Tuned shared `biome.json` rule levels to warning for non-blocking style/a11y categories |
@@ -326,7 +326,7 @@
 ### Files Modified (Session 7):
 
 **k8s/deployment.yaml:**
-- Added worker Deployment (replicas: 2, image: lexos/api:latest, command: node dist/worker-main.js)
+- Added worker Deployment (replicas: 2, image: evidentis/api:latest, command: node dist/worker-main.js)
 - Added worker PodDisruptionBudget (minAvailable: 1)
 - Added worker HorizontalPodAutoscaler (2-10 replicas, 70% CPU, 80% memory)
 - Added worker NetworkPolicy (egress to ai-service:5000, postgres:5432, redis:6379, clamav:3310)
@@ -725,7 +725,7 @@ mfa_enrollments, passkeys, sso_configurations, scim_tokens, share_links, webhook
 
 ## Complete File Structure
 ```
-lexos/
+evidentis/
 ├── .env.example
 ├── .github/workflows/ci.yml
 ├── docker-compose.yml

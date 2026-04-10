@@ -1,5 +1,5 @@
 /**
- * LexOS Security Hardening
+ * EvidentIS Security Hardening
  * Helmet, CORS, input validation, and security headers
  */
 

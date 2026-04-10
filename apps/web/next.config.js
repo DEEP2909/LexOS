@@ -2,7 +2,7 @@
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  transpilePackages: ['@lexos/shared'],
+  transpilePackages: ['@evidentis/shared'],
   images: {
     domains: ['localhost'],
   },

@@ -1,5 +1,5 @@
 /**
- * LexOS JWT Authentication Module
+ * EvidentIS JWT Authentication Module
  * RS256 JWT token issuance and validation
  */
 

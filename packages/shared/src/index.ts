@@ -1,4 +1,4 @@
-// LexOS Shared Types and Constants
+// EvidentIS Shared Types and Constants
 // All shared TypeScript types/interfaces for the monorepo
 
 // ============================================================

@@ -1,4 +1,4 @@
-# LexOS AI Worker - Analytics Tasks
+# EvidentIS AI Worker - Analytics Tasks
 # Handles analytics aggregation and computation
 
 import logging

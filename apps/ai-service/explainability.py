@@ -1,5 +1,5 @@
 """
-LexOS Explainability Layer
+EvidentIS Explainability Layer
 Provides reasoning chains, confidence scores, and supporting references for AI outputs
 """
 

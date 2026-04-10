@@ -1,5 +1,5 @@
 """
-LexOS Legal Prompt Templates
+EvidentIS Legal Prompt Templates
 Centralized prompt engineering for legal AI tasks.
 All prompts follow legal domain best practices and include safety guardrails.
 """

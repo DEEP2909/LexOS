@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 5: Research, AI Integration, Worker Tests
+ * EvidentIS API Test Suite - Part 5: Research, AI Integration, Worker Tests
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';

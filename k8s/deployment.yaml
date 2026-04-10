@@ -1,12 +1,12 @@
-# LexOS Kubernetes Deployment
+# EvidentIS Kubernetes Deployment
 # Production-ready configuration with autoscaling and secrets management
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: lexos
+  name: evidentis
   labels:
-    app.kubernetes.io/name: lexos
+    app.kubernetes.io/name: evidentis
     app.kubernetes.io/component: namespace
 
 ---
@@ -14,44 +14,44 @@ metadata:
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: lexos-secrets
-  namespace: lexos
+  name: evidentis-secrets
+  namespace: evidentis
 spec:
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
     name: aws-secrets-manager
   target:
-    name: lexos-secrets
+    name: evidentis-secrets
     creationPolicy: Owner
   data:
     - secretKey: DATABASE_URL
       remoteRef:
-        key: lexos/production/database
+        key: evidentis/production/database
         property: url
     - secretKey: REDIS_URL
       remoteRef:
-        key: lexos/production/redis
+        key: evidentis/production/redis
         property: url
     - secretKey: JWT_PRIVATE_KEY
       remoteRef:
-        key: lexos/production/jwt
+        key: evidentis/production/jwt
         property: private_key
     - secretKey: JWT_PUBLIC_KEY
       remoteRef:
-        key: lexos/production/jwt
+        key: evidentis/production/jwt
         property: public_key
     - secretKey: APP_ENCRYPTION_KEY
       remoteRef:
-        key: lexos/production/encryption
+        key: evidentis/production/encryption
         property: key
     - secretKey: STRIPE_SECRET_KEY
       remoteRef:
-        key: lexos/production/stripe
+        key: evidentis/production/stripe
         property: secret_key
     - secretKey: STRIPE_WEBHOOK_SECRET
       remoteRef:
-        key: lexos/production/stripe
+        key: evidentis/production/stripe
         property: webhook_secret
 
 ---
@@ -59,14 +59,14 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: lexos-config
-  namespace: lexos
+  name: evidentis-config
+  namespace: evidentis
 data:
   NODE_ENV: "production"
   PORT: "4000"
   AI_SERVICE_URL: "http://ai-service:5000"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-  OTEL_SERVICE_NAME: "lexos-api"
+  OTEL_SERVICE_NAME: "evidentis-api"
   MALWARE_SCANNER: "clamav"
   CLAMAV_HOST: "clamav"
   CLAMAV_PORT: "3310"
@@ -77,40 +77,40 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
-  namespace: lexos
+  namespace: evidentis
   labels:
-    app: lexos-api
+    app: evidentis-api
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: lexos-api
+      app: evidentis-api
   template:
     metadata:
       labels:
-        app: lexos-api
+        app: evidentis-api
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "4000"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: lexos-api
+      serviceAccountName: evidentis-api
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
         - name: api
-          image: lexos/api:latest
+          image: evidentis/api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 4000
               name: http
           envFrom:
             - configMapRef:
-                name: lexos-config
+                name: evidentis-config
             - secretRef:
-                name: lexos-secrets
+                name: evidentis-secrets
           resources:
             requests:
               memory: "512Mi"
@@ -147,7 +147,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app: lexos-api
+                    app: evidentis-api
                 topologyKey: kubernetes.io/hostname
 
 ---
@@ -156,10 +156,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: api
-  namespace: lexos
+  namespace: evidentis
 spec:
   selector:
-    app: lexos-api
+    app: evidentis-api
   ports:
     - port: 4000
       targetPort: 4000
@@ -172,7 +172,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: api-hpa
-  namespace: lexos
+  namespace: evidentis
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -200,23 +200,23 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-service
-  namespace: lexos
+  namespace: evidentis
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: lexos-ai-service
+      app: evidentis-ai-service
   template:
     metadata:
       labels:
-        app: lexos-ai-service
+        app: evidentis-ai-service
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
         - name: ai-service
-          image: lexos/ai-service:latest
+          image: evidentis/ai-service:latest
           ports:
             - containerPort: 5000
           env:
@@ -250,10 +250,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ai-service
-  namespace: lexos
+  namespace: evidentis
 spec:
   selector:
-    app: lexos-ai-service
+    app: evidentis-ai-service
   ports:
     - port: 5000
       targetPort: 5000
@@ -264,28 +264,28 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  namespace: lexos
+  namespace: evidentis
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: lexos-web
+      app: evidentis-web
   template:
     metadata:
       labels:
-        app: lexos-web
+        app: evidentis-web
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
         - name: web
-          image: lexos/web:latest
+          image: evidentis/web:latest
           ports:
             - containerPort: 3000
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "https://api.lexos.ai"
+              value: "https://api.evidentis.tech"
           resources:
             requests:
               memory: "256Mi"
@@ -312,10 +312,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: web
-  namespace: lexos
+  namespace: evidentis
 spec:
   selector:
-    app: lexos-web
+    app: evidentis-web
   ports:
     - port: 3000
       targetPort: 3000
@@ -325,8 +325,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: lexos-ingress
-  namespace: lexos
+  name: evidentis-ingress
+  namespace: evidentis
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -337,11 +337,11 @@ metadata:
 spec:
   tls:
     - hosts:
-        - lexos.ai
-        - api.lexos.ai
-      secretName: lexos-tls
+        - evidentis.tech
+        - api.evidentis.tech
+      secretName: evidentis-tls
   rules:
-    - host: lexos.ai
+    - host: evidentis.tech
       http:
         paths:
           - path: /
@@ -351,7 +351,7 @@ spec:
                 name: web
                 port:
                   number: 3000
-    - host: api.lexos.ai
+    - host: api.evidentis.tech
       http:
         paths:
           - path: /
@@ -368,12 +368,12 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: api-pdb
-  namespace: lexos
+  namespace: evidentis
 spec:
   minAvailable: 2
   selector:
     matchLabels:
-      app: lexos-api
+      app: evidentis-api
 
 ---
 # NetworkPolicy - Restrict pod-to-pod communication
@@ -381,11 +381,11 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: api-network-policy
-  namespace: lexos
+  namespace: evidentis
 spec:
   podSelector:
     matchLabels:
-      app: lexos-api
+      app: evidentis-api
   policyTypes:
     - Ingress
     - Egress
@@ -400,7 +400,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: lexos-ai-service
+              app: evidentis-ai-service
       ports:
         - port: 5000
     - to:
@@ -423,8 +423,8 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: lexos-api
-  namespace: lexos
+  name: evidentis-api
+  namespace: evidentis
 
 ---
 # Worker Deployment (Issue #1 fix - BullMQ document processing workers)
@@ -432,39 +432,39 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker
-  namespace: lexos
+  namespace: evidentis
   labels:
-    app: lexos-worker
+    app: evidentis-worker
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: lexos-worker
+      app: evidentis-worker
   template:
     metadata:
       labels:
-        app: lexos-worker
+        app: evidentis-worker
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: lexos-api
+      serviceAccountName: evidentis-api
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
       containers:
         - name: worker
-          image: lexos/api:latest
+          image: evidentis/api:latest
           command: ["node", "dist/worker-main.js"]
           ports:
             - containerPort: 9100
               name: metrics
           envFrom:
             - secretRef:
-                name: lexos-secrets
+                name: evidentis-secrets
             - configMapRef:
-                name: lexos-config
+                name: evidentis-config
           resources:
             requests:
               memory: "256Mi"
@@ -502,7 +502,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app: lexos-worker
+                    app: evidentis-worker
                 topologyKey: kubernetes.io/hostname
 
 ---
@@ -511,12 +511,12 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: worker-pdb
-  namespace: lexos
+  namespace: evidentis
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: lexos-worker
+      app: evidentis-worker
 
 ---
 # NetworkPolicy for Worker
@@ -524,11 +524,11 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: worker-network-policy
-  namespace: lexos
+  namespace: evidentis
 spec:
   podSelector:
     matchLabels:
-      app: lexos-worker
+      app: evidentis-worker
   policyTypes:
     - Ingress
     - Egress
@@ -537,7 +537,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: lexos-ai-service
+              app: evidentis-ai-service
       ports:
         - port: 5000
     - to:

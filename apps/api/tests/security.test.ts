@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 3: Tenant Isolation & Security Tests
+ * EvidentIS API Test Suite - Part 3: Tenant Isolation & Security Tests
  * Critical tests for multi-tenant security
  */
 

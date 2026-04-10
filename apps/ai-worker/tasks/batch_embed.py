@@ -1,4 +1,4 @@
-# LexOS AI Worker - Batch Embedding Tasks
+# EvidentIS AI Worker - Batch Embedding Tasks
 # Handles bulk document embedding and re-embedding operations
 
 import asyncio

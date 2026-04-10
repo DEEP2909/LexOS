@@ -1,4 +1,4 @@
-# LexOS AI Worker - Cleanup Tasks
+# EvidentIS AI Worker - Cleanup Tasks
 # Handles scheduled cleanup of expired data and orphaned files
 
 import logging

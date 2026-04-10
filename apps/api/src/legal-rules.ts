@@ -1,5 +1,5 @@
 /**
- * LexOS State-Specific Legal Rules
+ * EvidentIS State-Specific Legal Rules
  * Complete USA coverage: All 50 states + DC + Federal
  * These rules are applied during clause extraction and risk assessment
  */

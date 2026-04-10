@@ -1,4 +1,4 @@
-# LexOS AI Worker - Report Generation Tasks
+# EvidentIS AI Worker - Report Generation Tasks
 # Handles scheduled and on-demand report generation
 
 import logging

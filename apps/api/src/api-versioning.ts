@@ -1,5 +1,5 @@
 /**
- * LexOS API Versioning
+ * EvidentIS API Versioning
  * Version prefix and deprecation handling
  */
 
@@ -68,7 +68,7 @@ export async function registerVersionedRoutes(
  * Add version negotiation hook
  * Supports:
  *   - URL path version: /v1/users
- *   - Accept header: Accept: application/vnd.lexos.v1+json
+ *   - Accept header: Accept: application/vnd.evidentis.v1+json
  *   - Custom header: X-API-Version: v1
  */
 export function addVersionNegotiation(app: FastifyInstance): void {
@@ -123,7 +123,7 @@ function extractVersion(request: FastifyRequest): string | null {
   
   // 3. Check Accept header for vendor type
   const accept = request.headers.accept || '';
-  const vendorMatch = accept.match(/application\/vnd\.lexos\.(v\d+)\+json/);
+  const vendorMatch = accept.match(/application\/vnd\.evidentis\.(v\d+)\+json/);
   if (vendorMatch) {
     return vendorMatch[1];
   }

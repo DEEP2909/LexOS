@@ -112,7 +112,7 @@ export default function DashboardPage() {
               <div className="h-9 w-9 rounded-lg bg-[hsl(var(--navy))] flex items-center justify-center">
                 <Scale className="h-5 w-5 text-[hsl(var(--gold))]" />
               </div>
-              <span className="text-xl font-bold">LexOS</span>
+              <span className="text-xl font-bold">EvidentIS</span>
             </Link>
           </div>
 

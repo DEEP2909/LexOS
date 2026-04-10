@@ -1,5 +1,5 @@
 """
-LexOS AI Service - OCR Router
+EvidentIS AI Service - OCR Router
 Optical Character Recognition endpoints.
 """
 

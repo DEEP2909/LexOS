@@ -1,5 +1,5 @@
 /**
- * LexOS Storage Module
+ * EvidentIS Storage Module
  * S3/MinIO abstraction for file storage
  */
 

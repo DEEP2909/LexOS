@@ -1,5 +1,5 @@
 /**
- * LexOS AI Context Handling
+ * EvidentIS AI Context Handling
  * Document versioning, linking, and cross-document reasoning
  */
 

@@ -1,5 +1,5 @@
 /**
- * LexOS Tenant Isolation Middleware
+ * EvidentIS Tenant Isolation Middleware
  * Enforces strict tenant separation at the middleware level
  * CRITICAL: Every database query MUST be filtered by tenant_id
  */

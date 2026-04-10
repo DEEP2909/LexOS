@@ -1,4 +1,4 @@
-# LexOS AI Worker - Obligation Reminder Tasks
+# EvidentIS AI Worker - Obligation Reminder Tasks
 # Handles deadline notifications and overdue alerts
 
 import logging

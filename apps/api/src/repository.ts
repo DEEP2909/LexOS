@@ -1,5 +1,5 @@
 /**
- * LexOS Repository Layer
+ * EvidentIS Repository Layer
  * All SQL queries with explicit column enumeration.
  * NEVER use SELECT * - always enumerate columns.
  * EVERY query MUST include tenant_id filter.
@@ -16,7 +16,7 @@ import type {
   Playbook,
   AuditEvent,
   RiskLevel,
-} from '@lexos/shared';
+} from '@evidentis/shared';
 
 // ============================================================================
 // Column Constants - NEVER use SELECT *

@@ -1,5 +1,5 @@
 # ============================================================
-# LexOS AI Worker Dockerfile
+# EvidentIS AI Worker Dockerfile
 # Python Celery Async Worker
 # ============================================================
 

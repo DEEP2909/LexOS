@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Embeddings Router
+EvidentIS AI Service - Embeddings Router
 Text embedding generation endpoints.
 """
 

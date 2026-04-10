@@ -108,7 +108,7 @@ export default function ResetPasswordPage() {
             <div className="h-12 w-12 rounded-xl bg-[hsl(var(--navy))] flex items-center justify-center">
               <Scale className="h-7 w-7 text-[hsl(var(--gold))]" />
             </div>
-            <span className="text-2xl font-bold">LexOS</span>
+            <span className="text-2xl font-bold">EvidentIS</span>
           </div>
 
           <Card>
@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
           <div className="h-12 w-12 rounded-xl bg-[hsl(var(--navy))] flex items-center justify-center">
             <Scale className="h-7 w-7 text-[hsl(var(--gold))]" />
           </div>
-          <span className="text-2xl font-bold">LexOS</span>
+          <span className="text-2xl font-bold">EvidentIS</span>
         </div>
 
         <Card>

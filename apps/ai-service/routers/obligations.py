@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Obligations Router
+EvidentIS AI Service - Obligations Router
 Extract and track contractual obligations with deadlines.
 """
 

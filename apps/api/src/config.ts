@@ -1,5 +1,5 @@
 /**
- * LexOS API Configuration
+ * EvidentIS API Configuration
  * Zod-validated environment configuration with 80+ variables
  */
 
@@ -23,8 +23,8 @@ const configSchema = z.object({
   JWT_PUBLIC_KEY_PATH: z.string().default('./keys/public.pem'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().default(7),
-  JWT_ISSUER: z.string().default('lexos'),
-  JWT_AUDIENCE: z.string().default('lexos-api'),
+  JWT_ISSUER: z.string().default('evidentis'),
+  JWT_AUDIENCE: z.string().default('evidentis-api'),
 
   // Encryption - REQUIRED in production (Issue #4 fix)
   APP_ENCRYPTION_KEY: isProductionEnv 
@@ -51,7 +51,7 @@ const configSchema = z.object({
   STORAGE_BACKEND: z.enum(['local', 's3']).default('local'),
   LOCAL_STORAGE_PATH: z.string().default('./storage'),
   S3_REGION: z.string().default('us-east-1'),
-  S3_BUCKET: z.string().default('lexos-documents'),
+  S3_BUCKET: z.string().default('evidentis-documents'),
   S3_ENDPOINT: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
@@ -68,7 +68,7 @@ const configSchema = z.object({
 
   // Email
   EMAIL_DELIVERY_MODE: z.enum(['log', 'smtp']).default('log'),
-  MAIL_FROM: z.string().email().default('noreply@lexos.law'),
+  MAIL_FROM: z.string().email().default('noreply@evidentis.law'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),
@@ -84,7 +84,7 @@ const configSchema = z.object({
 
   // Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
-  OTEL_SERVICE_NAME: z.string().default('lexos-api'),
+  OTEL_SERVICE_NAME: z.string().default('evidentis-api'),
 
   // OpenAI (Premium fallback)
   OPENAI_API_KEY: z.string().optional(),
@@ -123,7 +123,7 @@ const configSchema = z.object({
   LOCKOUT_DURATION_MINUTES: z.coerce.number().default(15),
 
   // WebAuthn
-  WEBAUTHN_RP_NAME: z.string().default('LexOS'),
+  WEBAUTHN_RP_NAME: z.string().default('EvidentIS'),
   WEBAUTHN_RP_ID: z.string().default('localhost'),
   WEBAUTHN_ORIGIN: z.string().default('http://localhost:3000'),
 });

@@ -1,5 +1,5 @@
 /**
- * LexOS Document Processing Orchestrator
+ * EvidentIS Document Processing Orchestrator
  * Defines the workflow for document processing pipeline
  * Uses BullMQ Flow for declarative job chaining
  */

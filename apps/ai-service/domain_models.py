@@ -1,5 +1,5 @@
 """
-LexOS Legal Domain Models
+EvidentIS Legal Domain Models
 Strict schemas for legal entities enforced across all AI operations
 """
 

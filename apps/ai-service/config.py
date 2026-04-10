@@ -1,5 +1,5 @@
 """
-LexOS AI Service Configuration
+EvidentIS AI Service Configuration
 Pydantic Settings for environment configuration
 """
 

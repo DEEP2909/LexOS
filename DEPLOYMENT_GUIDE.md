@@ -1,8 +1,10 @@
-# LexOS Cloud Deployment Guide
+# EvidentIS: Evidence-Based Intelligent Decision System - Cloud Deployment Guide
 
-## Complete Step-by-Step Guide to Deploy LexOS on Cloud Infrastructure
+## Complete Step-by-Step Guide to Deploy EvidentIS on Cloud Infrastructure
 
 This guide covers deployment to **AWS**, **Google Cloud Platform (GCP)**, and **Azure**. Choose your preferred cloud provider and follow the corresponding sections.
+
+**EvidentIS** stands for **Evidence-Based Intelligent Decision System**.
 
 ---
 
@@ -84,7 +86,7 @@ FRONTEND_URL=https://app.yourdomain.com
 # =============================================================================
 # DATABASE
 # =============================================================================
-DATABASE_URL=postgresql://lexos:SECURE_PASSWORD@db.yourdomain.com:5432/lexos_production?sslmode=require
+DATABASE_URL=postgresql://evidentis:SECURE_PASSWORD@db.yourdomain.com:5432/evidentis_production?sslmode=require
 
 # =============================================================================
 # REDIS
@@ -109,7 +111,7 @@ APP_ENCRYPTION_KEY=your-64-character-hex-key-here
 # =============================================================================
 # STORAGE (S3-compatible)
 # =============================================================================
-S3_BUCKET=lexos-documents-production
+S3_BUCKET=evidentis-documents-production
 S3_REGION=us-east-1
 S3_ENDPOINT=https://s3.amazonaws.com
 AWS_ACCESS_KEY_ID=AKIA...
@@ -151,7 +153,7 @@ EMAIL_FROM=noreply@yourdomain.com
 # OBSERVABILITY
 # =============================================================================
 OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.yourdomain.com:4318
-OTEL_SERVICE_NAME=lexos-api
+OTEL_SERVICE_NAME=evidentis-api
 LOG_LEVEL=info
 ```
 
@@ -219,16 +221,16 @@ aws configure
 # Enter: Access Key ID, Secret Access Key, Region (us-east-1), Output format (json)
 
 # Create VPC
-aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=lexos-vpc}]'
+aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=evidentis-vpc}]'
 
 # Note the VPC ID from output (vpc-xxxxxxxx)
 export VPC_ID=vpc-xxxxxxxx
 
 # Create subnets (2 public, 2 private across 2 AZs)
-aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=lexos-public-1a}]'
-aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=lexos-public-1b}]'
-aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.3.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=lexos-private-1a}]'
-aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=lexos-private-1b}]'
+aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=evidentis-public-1a}]'
+aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=evidentis-public-1b}]'
+aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.3.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=evidentis-private-1a}]'
+aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=evidentis-private-1b}]'
 ```
 
 ### Step 2: Set Up RDS PostgreSQL
@@ -236,33 +238,33 @@ aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24 --availability-z
 ```bash
 # Create DB subnet group
 aws rds create-db-subnet-group \
-  --db-subnet-group-name lexos-db-subnet \
-  --db-subnet-group-description "LexOS DB Subnet Group" \
+  --db-subnet-group-name evidentis-db-subnet \
+  --db-subnet-group-description "EvidentIS DB Subnet Group" \
   --subnet-ids subnet-private-1a subnet-private-1b
 
 # Create PostgreSQL instance with pgvector
 aws rds create-db-instance \
-  --db-instance-identifier lexos-production \
+  --db-instance-identifier evidentis-production \
   --db-instance-class db.r6g.large \
   --engine postgres \
   --engine-version 16.1 \
-  --master-username lexos_admin \
+  --master-username evidentis_admin \
   --master-user-password "YOUR_SECURE_PASSWORD" \
   --allocated-storage 100 \
   --storage-type gp3 \
   --storage-encrypted \
   --vpc-security-group-ids sg-xxxxxxxx \
-  --db-subnet-group-name lexos-db-subnet \
+  --db-subnet-group-name evidentis-db-subnet \
   --backup-retention-period 30 \
   --multi-az \
   --auto-minor-version-upgrade \
   --deletion-protection
 
 # Wait for instance to be available (5-10 minutes)
-aws rds wait db-instance-available --db-instance-identifier lexos-production
+aws rds wait db-instance-available --db-instance-identifier evidentis-production
 
 # Install pgvector extension (connect to DB and run)
-psql -h lexos-production.xxxxxxxx.us-east-1.rds.amazonaws.com -U lexos_admin -d postgres
+psql -h evidentis-production.xxxxxxxx.us-east-1.rds.amazonaws.com -U evidentis_admin -d postgres
 CREATE EXTENSION vector;
 ```
 
@@ -271,8 +273,8 @@ CREATE EXTENSION vector;
 ```bash
 # Create Redis cluster
 aws elasticache create-replication-group \
-  --replication-group-id lexos-redis \
-  --replication-group-description "LexOS Redis Cluster" \
+  --replication-group-id evidentis-redis \
+  --replication-group-description "EvidentIS Redis Cluster" \
   --engine redis \
   --engine-version 7.0 \
   --cache-node-type cache.r6g.large \
@@ -281,7 +283,7 @@ aws elasticache create-replication-group \
   --at-rest-encryption-enabled \
   --transit-encryption-enabled \
   --auth-token "YOUR_REDIS_AUTH_TOKEN" \
-  --cache-subnet-group-name lexos-redis-subnet \
+  --cache-subnet-group-name evidentis-redis-subnet \
   --security-group-ids sg-xxxxxxxx
 ```
 
@@ -290,29 +292,29 @@ aws elasticache create-replication-group \
 ```bash
 # Create S3 bucket
 aws s3api create-bucket \
-  --bucket lexos-documents-production \
+  --bucket evidentis-documents-production \
   --region us-east-1
 
 # Enable versioning
 aws s3api put-bucket-versioning \
-  --bucket lexos-documents-production \
+  --bucket evidentis-documents-production \
   --versioning-configuration Status=Enabled
 
 # Enable encryption
 aws s3api put-bucket-encryption \
-  --bucket lexos-documents-production \
+  --bucket evidentis-documents-production \
   --server-side-encryption-configuration '{
     "Rules": [{
       "ApplyServerSideEncryptionByDefault": {
         "SSEAlgorithm": "aws:kms",
-        "KMSMasterKeyID": "alias/lexos-key"
+        "KMSMasterKeyID": "alias/evidentis-key"
       }
     }]
   }'
 
 # Block public access
 aws s3api put-public-access-block \
-  --bucket lexos-documents-production \
+  --bucket evidentis-documents-production \
   --public-access-block-configuration '{
     "BlockPublicAcls": true,
     "IgnorePublicAcls": true,
@@ -321,7 +323,7 @@ aws s3api put-public-access-block \
   }'
 
 # Create quarantine bucket for malware scanning
-aws s3api create-bucket --bucket lexos-quarantine-production --region us-east-1
+aws s3api create-bucket --bucket evidentis-quarantine-production --region us-east-1
 ```
 
 ### Step 5: Set Up Secrets Manager
@@ -329,17 +331,17 @@ aws s3api create-bucket --bucket lexos-quarantine-production --region us-east-1
 ```bash
 # Store database credentials
 aws secretsmanager create-secret \
-  --name lexos/production/database \
+  --name evidentis/production/database \
   --secret-string '{
-    "url": "postgresql://lexos_admin:PASSWORD@lexos-production.xxx.rds.amazonaws.com:5432/lexos",
-    "host": "lexos-production.xxx.rds.amazonaws.com",
-    "username": "lexos_admin",
+    "url": "postgresql://evidentis_admin:PASSWORD@evidentis-production.xxx.rds.amazonaws.com:5432/evidentis",
+    "host": "evidentis-production.xxx.rds.amazonaws.com",
+    "username": "evidentis_admin",
     "password": "YOUR_PASSWORD"
   }'
 
 # Store JWT keys
 aws secretsmanager create-secret \
-  --name lexos/production/jwt \
+  --name evidentis/production/jwt \
   --secret-string '{
     "private_key": "-----BEGIN RSA PRIVATE KEY-----\n...",
     "public_key": "-----BEGIN PUBLIC KEY-----\n..."
@@ -347,12 +349,12 @@ aws secretsmanager create-secret \
 
 # Store encryption key
 aws secretsmanager create-secret \
-  --name lexos/production/encryption \
+  --name evidentis/production/encryption \
   --secret-string '{"key": "your-64-char-hex-key"}'
 
 # Store Stripe keys
 aws secretsmanager create-secret \
-  --name lexos/production/stripe \
+  --name evidentis/production/stripe \
   --secret-string '{
     "secret_key": "sk_live_...",
     "webhook_secret": "whsec_..."
@@ -364,12 +366,12 @@ aws secretsmanager create-secret \
 ```bash
 # Create EKS cluster
 eksctl create cluster \
-  --name lexos-production \
+  --name evidentis-production \
   --region us-east-1 \
   --version 1.29 \
   --vpc-private-subnets subnet-private-1a,subnet-private-1b \
   --vpc-public-subnets subnet-public-1a,subnet-public-1b \
-  --nodegroup-name lexos-workers \
+  --nodegroup-name evidentis-workers \
   --node-type t3.large \
   --nodes 3 \
   --nodes-min 2 \
@@ -381,13 +383,13 @@ eksctl create cluster \
   --alb-ingress-access
 
 # Update kubeconfig
-aws eks update-kubeconfig --name lexos-production --region us-east-1
+aws eks update-kubeconfig --name evidentis-production --region us-east-1
 
 # Install AWS Load Balancer Controller
 helm repo add eks https://aws.github.io/eks-charts
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   -n kube-system \
-  --set clusterName=lexos-production \
+  --set clusterName=evidentis-production \
   --set serviceAccount.create=true \
   --set region=us-east-1
 
@@ -401,30 +403,30 @@ helm install external-secrets external-secrets/external-secrets \
 
 ```bash
 # Create ECR repositories
-aws ecr create-repository --repository-name lexos/api
-aws ecr create-repository --repository-name lexos/web
-aws ecr create-repository --repository-name lexos/ai-service
+aws ecr create-repository --repository-name evidentis/api
+aws ecr create-repository --repository-name evidentis/web
+aws ecr create-repository --repository-name evidentis/ai-service
 
 # Login to ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com
 
 # Build and push images
-cd lexos
+cd evidentis
 
 # API
-docker build -f apps/api/Dockerfile.api -t lexos/api:latest .
-docker tag lexos/api:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/api:latest
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/api:latest
+docker build -f apps/api/Dockerfile.api -t evidentis/api:latest .
+docker tag evidentis/api:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/api:latest
+docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/api:latest
 
 # Web
-docker build -f apps/web/Dockerfile.web -t lexos/web:latest .
-docker tag lexos/web:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/web:latest
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/web:latest
+docker build -f apps/web/Dockerfile.web -t evidentis/web:latest .
+docker tag evidentis/web:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/web:latest
+docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/web:latest
 
 # AI Service
-docker build -f apps/ai-service/Dockerfile -t lexos/ai-service:latest apps/ai-service/
-docker tag lexos/ai-service:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/ai-service:latest
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/ai-service:latest
+docker build -f apps/ai-service/Dockerfile -t evidentis/ai-service:latest apps/ai-service/
+docker tag evidentis/ai-service:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/ai-service:latest
+docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/ai-service:latest
 ```
 
 ### Step 8: Deploy to Kubernetes
@@ -434,22 +436,22 @@ docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/ai-service:latest
 kubectl apply -f k8s/deployment.yaml
 
 # Verify deployments
-kubectl get pods -n lexos
-kubectl get services -n lexos
-kubectl get ingress -n lexos
+kubectl get pods -n evidentis
+kubectl get services -n evidentis
+kubectl get ingress -n evidentis
 
 # Check logs
-kubectl logs -f deployment/api -n lexos
+kubectl logs -f deployment/api -n evidentis
 ```
 
 ### Step 9: Run Database Migrations
 
 ```bash
 # Create a migration job
-kubectl run lexos-migrate --rm -it --restart=Never \
-  --image=123456789012.dkr.ecr.us-east-1.amazonaws.com/lexos/api:latest \
+kubectl run evidentis-migrate --rm -it --restart=Never \
+  --image=123456789012.dkr.ecr.us-east-1.amazonaws.com/evidentis/api:latest \
   --env="DATABASE_URL=postgresql://..." \
-  -n lexos \
+  -n evidentis \
   -- npm run migrate:up
 ```
 
@@ -457,7 +459,7 @@ kubectl run lexos-migrate --rm -it --restart=Never \
 
 ```bash
 # Get Load Balancer address
-kubectl get ingress -n lexos
+kubectl get ingress -n evidentis
 
 # Create Route 53 records (A records pointing to ALB)
 aws route53 change-resource-record-sets \
@@ -470,7 +472,7 @@ aws route53 change-resource-record-sets \
         "Type": "A",
         "AliasTarget": {
           "HostedZoneId": "Z35SXDOTRQ7X7K",
-          "DNSName": "k8s-lexos-xxx.us-east-1.elb.amazonaws.com",
+          "DNSName": "k8s-evidentis-xxx.us-east-1.elb.amazonaws.com",
           "EvaluateTargetHealth": true
         }
       }
@@ -503,11 +505,11 @@ gcloud services enable \
   storage.googleapis.com
 
 # Create VPC
-gcloud compute networks create lexos-vpc --subnet-mode=custom
+gcloud compute networks create evidentis-vpc --subnet-mode=custom
 
 # Create subnets
-gcloud compute networks subnets create lexos-subnet \
-  --network=lexos-vpc \
+gcloud compute networks subnets create evidentis-subnet \
+  --network=evidentis-vpc \
   --region=us-central1 \
   --range=10.0.0.0/16
 ```
@@ -516,7 +518,7 @@ gcloud compute networks subnets create lexos-subnet \
 
 ```bash
 # Create PostgreSQL instance
-gcloud sql instances create lexos-production \
+gcloud sql instances create evidentis-production \
   --database-version=POSTGRES_16 \
   --tier=db-custom-2-8192 \
   --region=us-central1 \
@@ -530,11 +532,11 @@ gcloud sql instances create lexos-production \
 
 # Set root password
 gcloud sql users set-password postgres \
-  --instance=lexos-production \
+  --instance=evidentis-production \
   --password=YOUR_SECURE_PASSWORD
 
 # Create database
-gcloud sql databases create lexos --instance=lexos-production
+gcloud sql databases create evidentis --instance=evidentis-production
 
 # Enable pgvector (run SQL in Cloud SQL)
 # CREATE EXTENSION vector;
@@ -544,7 +546,7 @@ gcloud sql databases create lexos --instance=lexos-production
 
 ```bash
 # Create Redis instance
-gcloud redis instances create lexos-redis \
+gcloud redis instances create evidentis-redis \
   --size=4 \
   --region=us-central1 \
   --redis-version=redis_7_0 \
@@ -556,7 +558,7 @@ gcloud redis instances create lexos-redis \
 
 ```bash
 # Create GKE cluster
-gcloud container clusters create lexos-production \
+gcloud container clusters create evidentis-production \
   --region=us-central1 \
   --num-nodes=3 \
   --machine-type=e2-standard-4 \
@@ -567,16 +569,16 @@ gcloud container clusters create lexos-production \
   --workload-pool=YOUR_PROJECT_ID.svc.id.goog
 
 # Get credentials
-gcloud container clusters get-credentials lexos-production --region=us-central1
+gcloud container clusters get-credentials evidentis-production --region=us-central1
 ```
 
 ### Step 5: Deploy to GKE
 
 ```bash
 # Build and push to GCR
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/lexos-api:latest apps/api/
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/lexos-web:latest apps/web/
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/lexos-ai-service:latest apps/ai-service/
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/evidentis-api:latest apps/api/
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/evidentis-web:latest apps/web/
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/evidentis-ai-service:latest apps/ai-service/
 
 # Apply Kubernetes manifests
 kubectl apply -f k8s/deployment.yaml
@@ -593,12 +595,12 @@ kubectl apply -f k8s/deployment.yaml
 az login
 
 # Create resource group
-az group create --name lexos-production --location eastus
+az group create --name evidentis-production --location eastus
 
 # Create VNet
 az network vnet create \
-  --resource-group lexos-production \
-  --name lexos-vnet \
+  --resource-group evidentis-production \
+  --name evidentis-vnet \
   --address-prefix 10.0.0.0/16 \
   --subnet-name default \
   --subnet-prefix 10.0.0.0/24
@@ -609,10 +611,10 @@ az network vnet create \
 ```bash
 # Create PostgreSQL Flexible Server
 az postgres flexible-server create \
-  --resource-group lexos-production \
-  --name lexos-db \
+  --resource-group evidentis-production \
+  --name evidentis-db \
   --location eastus \
-  --admin-user lexos_admin \
+  --admin-user evidentis_admin \
   --admin-password YOUR_SECURE_PASSWORD \
   --sku-name Standard_D2s_v3 \
   --storage-size 128 \
@@ -621,8 +623,8 @@ az postgres flexible-server create \
 
 # Configure pgvector extension
 az postgres flexible-server parameter set \
-  --resource-group lexos-production \
-  --server-name lexos-db \
+  --resource-group evidentis-production \
+  --server-name evidentis-db \
   --name azure.extensions \
   --value vector
 ```
@@ -632,8 +634,8 @@ az postgres flexible-server parameter set \
 ```bash
 # Create Redis cache
 az redis create \
-  --resource-group lexos-production \
-  --name lexos-redis \
+  --resource-group evidentis-production \
+  --name evidentis-redis \
   --location eastus \
   --sku Premium \
   --vm-size P1 \
@@ -646,8 +648,8 @@ az redis create \
 ```bash
 # Create AKS cluster
 az aks create \
-  --resource-group lexos-production \
-  --name lexos-aks \
+  --resource-group evidentis-production \
+  --name evidentis-aks \
   --node-count 3 \
   --node-vm-size Standard_D4s_v3 \
   --enable-managed-identity \
@@ -655,21 +657,21 @@ az aks create \
   --generate-ssh-keys
 
 # Get credentials
-az aks get-credentials --resource-group lexos-production --name lexos-aks
+az aks get-credentials --resource-group evidentis-production --name evidentis-aks
 ```
 
 ### Step 5: Deploy to AKS
 
 ```bash
 # Build and push to ACR
-az acr create --resource-group lexos-production --name lexosacr --sku Premium
-az acr login --name lexosacr
+az acr create --resource-group evidentis-production --name evidentisacr --sku Premium
+az acr login --name evidentisacr
 
-docker tag lexos/api:latest lexosacr.azurecr.io/lexos/api:latest
-docker push lexosacr.azurecr.io/lexos/api:latest
+docker tag evidentis/api:latest evidentisacr.azurecr.io/evidentis/api:latest
+docker push evidentisacr.azurecr.io/evidentis/api:latest
 
 # Attach ACR to AKS
-az aks update --resource-group lexos-production --name lexos-aks --attach-acr lexosacr
+az aks update --resource-group evidentis-production --name evidentis-aks --attach-acr evidentisacr
 
 # Deploy
 kubectl apply -f k8s/deployment.yaml
@@ -685,7 +687,7 @@ The `k8s/deployment.yaml` file contains everything needed:
 
 ```bash
 # Create namespace
-kubectl create namespace lexos
+kubectl create namespace evidentis
 
 # Apply external secrets (AWS Secrets Manager / GCP Secret Manager / Azure Key Vault)
 kubectl apply -f k8s/external-secrets.yaml
@@ -694,34 +696,34 @@ kubectl apply -f k8s/external-secrets.yaml
 kubectl apply -f k8s/deployment.yaml
 
 # Verify deployment
-kubectl get all -n lexos
+kubectl get all -n evidentis
 ```
 
 ### Scaling Configuration
 
 ```bash
 # Manual scaling
-kubectl scale deployment api --replicas=5 -n lexos
-kubectl scale deployment worker --replicas=4 -n lexos
+kubectl scale deployment api --replicas=5 -n evidentis
+kubectl scale deployment worker --replicas=4 -n evidentis
 
 # View HPA status (API only)
-kubectl get hpa -n lexos
+kubectl get hpa -n evidentis
 
 # Update API HPA limits
-kubectl patch hpa api-hpa -n lexos --type='json' -p='[{"op": "replace", "path": "/spec/maxReplicas", "value": 30}]'
+kubectl patch hpa api-hpa -n evidentis --type='json' -p='[{"op": "replace", "path": "/spec/maxReplicas", "value": 30}]'
 ```
 
 ### Rolling Updates
 
 ```bash
 # Update image
-kubectl set image deployment/api api=lexos/api:v1.2.0 -n lexos
+kubectl set image deployment/api api=evidentis/api:v1.2.0 -n evidentis
 
 # Check rollout status
-kubectl rollout status deployment/api -n lexos
+kubectl rollout status deployment/api -n evidentis
 
 # Rollback if needed
-kubectl rollout undo deployment/api -n lexos
+kubectl rollout undo deployment/api -n evidentis
 ```
 
 ---
@@ -736,27 +738,27 @@ kubectl apply -f - <<EOF
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: lexos-migrate
-  namespace: lexos
+  name: evidentis-migrate
+  namespace: evidentis
 spec:
   template:
     spec:
       containers:
       - name: migrate
-        image: lexos/api:latest
+        image: evidentis/api:latest
         command: ["npm", "run", "migrate:up"]
         envFrom:
         - secretRef:
-            name: lexos-secrets
+            name: evidentis-secrets
       restartPolicy: Never
   backoffLimit: 3
 EOF
 
 # Option 2: Direct connection
 kubectl run -it --rm migration \
-  --image=lexos/api:latest \
+  --image=evidentis/api:latest \
   --restart=Never \
-  -n lexos \
+  -n evidentis \
   -- npm run migrate:up
 ```
 
@@ -764,9 +766,9 @@ kubectl run -it --rm migration \
 
 ```bash
 kubectl run -it --rm seeder \
-  --image=lexos/api:latest \
+  --image=evidentis/api:latest \
   --restart=Never \
-  -n lexos \
+  -n evidentis \
   -- npm run seed
 ```
 
@@ -817,7 +819,7 @@ aws acm request-certificate \
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
-  name: lexos-cert
+  name: evidentis-cert
 spec:
   domains:
     - api.yourdomain.com
@@ -871,12 +873,12 @@ kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
 # Open http://localhost:3000 (admin / SECURE_PASSWORD)
 ```
 
-### Import LexOS Dashboard
+### Import EvidentIS Dashboard
 
 ```json
 {
   "dashboard": {
-    "title": "LexOS Production",
+    "title": "EvidentIS Production",
     "panels": [
       {
         "title": "Request Rate",
@@ -910,11 +912,11 @@ kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: lexos-alerts
+  name: evidentis-alerts
   namespace: monitoring
 spec:
   groups:
-  - name: lexos
+  - name: evidentis
     rules:
     - alert: HighErrorRate
       expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
@@ -969,16 +971,16 @@ spec:
 # AWS RDS - Automated backups enabled (30 days retention)
 # Manual snapshot
 aws rds create-db-snapshot \
-  --db-instance-identifier lexos-production \
-  --db-snapshot-identifier lexos-manual-$(date +%Y%m%d)
+  --db-instance-identifier evidentis-production \
+  --db-snapshot-identifier evidentis-manual-$(date +%Y%m%d)
 
 # GCP Cloud SQL - Automated backups enabled
-gcloud sql backups create --instance=lexos-production
+gcloud sql backups create --instance=evidentis-production
 
 # Azure - Automated backups enabled
 az postgres flexible-server backup create \
-  --resource-group lexos-production \
-  --server-name lexos-db
+  --resource-group evidentis-production \
+  --server-name evidentis-db
 ```
 
 ### S3 Backup (Cross-Region Replication)
@@ -986,7 +988,7 @@ az postgres flexible-server backup create \
 ```bash
 # Enable cross-region replication
 aws s3api put-bucket-replication \
-  --bucket lexos-documents-production \
+  --bucket evidentis-documents-production \
   --replication-configuration '{
     "Role": "arn:aws:iam::123456789012:role/replication-role",
     "Rules": [{
@@ -995,7 +997,7 @@ aws s3api put-bucket-replication \
       "DeleteMarkerReplication": {"Status": "Disabled"},
       "Filter": {},
       "Destination": {
-        "Bucket": "arn:aws:s3:::lexos-documents-dr",
+        "Bucket": "arn:aws:s3:::evidentis-documents-dr",
         "StorageClass": "STANDARD_IA"
       }
     }]
@@ -1014,11 +1016,11 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: api-network-policy
-  namespace: lexos
+  namespace: evidentis
 spec:
   podSelector:
     matchLabels:
-      app: lexos-api
+      app: evidentis-api
   policyTypes:
   - Ingress
   - Egress
@@ -1033,7 +1035,7 @@ spec:
   - to:
     - podSelector:
         matchLabels:
-          app: lexos-ai-service
+          app: evidentis-ai-service
     ports:
     - port: 5000
   - to:
@@ -1068,7 +1070,7 @@ spec:
 
 ## Authentication Configuration
 
-LexOS supports **SAML SSO**, **WebAuthn passkeys**, and **SCIM 2.0 provisioning**. Configure these in the API service environment before rollout.
+EvidentIS supports **SAML SSO**, **WebAuthn passkeys**, and **SCIM 2.0 provisioning**. Configure these in the API service environment before rollout.
 
 ### SAML SSO
 
@@ -1086,7 +1088,7 @@ SAML_NAMEID_FORMAT=urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
 
 Deployment steps:
 1. Create a SAML application in your IdP (Okta/Azure AD/Google Workspace).
-2. Set ACS URL and Entity ID to the LexOS values above.
+2. Set ACS URL and Entity ID to the EvidentIS values above.
 3. Map email, first name, last name, and group/role attributes.
 4. Upload/download metadata and verify `/auth/saml/metadata` plus login callback paths.
 5. Test SP-initiated and IdP-initiated login in staging before production.
@@ -1098,7 +1100,7 @@ Configure relying party values exactly to your production domain:
 ```bash
 WEBAUTHN_ENABLED=true
 WEBAUTHN_RP_ID=app.yourdomain.com
-WEBAUTHN_RP_NAME=LexOS
+WEBAUTHN_RP_NAME=EvidentIS
 WEBAUTHN_ORIGIN=https://app.yourdomain.com
 WEBAUTHN_REQUIRE_RESIDENT_KEY=preferred
 WEBAUTHN_USER_VERIFICATION=preferred
@@ -1122,9 +1124,9 @@ SCIM_SYNC_DEPROVISION=true
 ```
 
 Deployment steps:
-1. Enable SCIM in your IdP and configure the LexOS SCIM base URL.
+1. Enable SCIM in your IdP and configure the EvidentIS SCIM base URL.
 2. Set bearer token authentication in the IdP SCIM app.
-3. Map IdP user/group attributes to LexOS fields and roles.
+3. Map IdP user/group attributes to EvidentIS fields and roles.
 4. Validate create, update, deactivate, and group membership sync flows.
 
 ---
@@ -1168,14 +1170,14 @@ jobs:
         
       - name: Build and push
         run: |
-          docker build -f apps/api/Dockerfile.api -t $ECR_REGISTRY/lexos/api:$GITHUB_SHA .
-          docker push $ECR_REGISTRY/lexos/api:$GITHUB_SHA
+          docker build -f apps/api/Dockerfile.api -t $ECR_REGISTRY/evidentis/api:$GITHUB_SHA .
+          docker push $ECR_REGISTRY/evidentis/api:$GITHUB_SHA
           
       - name: Deploy to EKS
         run: |
-          aws eks update-kubeconfig --name lexos-production
-          kubectl set image deployment/api api=$ECR_REGISTRY/lexos/api:$GITHUB_SHA -n lexos
-          kubectl rollout status deployment/api -n lexos
+          aws eks update-kubeconfig --name evidentis-production
+          kubectl set image deployment/api api=$ECR_REGISTRY/evidentis/api:$GITHUB_SHA -n evidentis
+          kubectl rollout status deployment/api -n evidentis
 ```
 
 ---
@@ -1186,14 +1188,14 @@ jobs:
 
 **1. Pods not starting**
 ```bash
-kubectl describe pod <pod-name> -n lexos
-kubectl logs <pod-name> -n lexos --previous
+kubectl describe pod <pod-name> -n evidentis
+kubectl logs <pod-name> -n evidentis --previous
 ```
 
 **2. Database connection issues**
 ```bash
 # Check secrets
-kubectl get secret lexos-secrets -n lexos -o jsonpath='{.data.DATABASE_URL}' | base64 -d
+kubectl get secret evidentis-secrets -n evidentis -o jsonpath='{.data.DATABASE_URL}' | base64 -d
 
 # Test connection from pod
 kubectl run -it --rm debug --image=postgres:16 --restart=Never -- psql $DATABASE_URL
@@ -1201,33 +1203,33 @@ kubectl run -it --rm debug --image=postgres:16 --restart=Never -- psql $DATABASE
 
 **3. High memory usage**
 ```bash
-kubectl top pods -n lexos
-kubectl describe hpa -n lexos
+kubectl top pods -n evidentis
+kubectl describe hpa -n evidentis
 ```
 
 **4. SSL certificate issues**
 ```bash
-kubectl describe certificate lexos-tls -n lexos
-kubectl get certificaterequest -n lexos
+kubectl describe certificate evidentis-tls -n evidentis
+kubectl get certificaterequest -n evidentis
 ```
 
 ### Useful Commands
 
 ```bash
 # View all resources
-kubectl get all -n lexos
+kubectl get all -n evidentis
 
 # View logs
-kubectl logs -f deployment/api -n lexos
+kubectl logs -f deployment/api -n evidentis
 
 # Execute into pod
-kubectl exec -it deployment/api -n lexos -- /bin/sh
+kubectl exec -it deployment/api -n evidentis -- /bin/sh
 
 # Port forward for debugging
-kubectl port-forward svc/api 4000:4000 -n lexos
+kubectl port-forward svc/api 4000:4000 -n evidentis
 
 # View events
-kubectl get events -n lexos --sort-by='.lastTimestamp'
+kubectl get events -n evidentis --sort-by='.lastTimestamp'
 ```
 
 ---
@@ -1251,10 +1253,10 @@ kubectl get events -n lexos --sort-by='.lastTimestamp'
 ## Support
 
 For deployment assistance:
-- **Email**: devops@lexos.ai
-- **Slack**: #lexos-deployment
-- **Documentation**: https://docs.lexos.ai/deployment
+- **Email**: devops@evidentis.tech
+- **Slack**: #evidentis-deployment
+- **Documentation**: https://docs.evidentis.tech/deployment
 
 ---
 
-© 2026 LexOS Inc. All rights reserved.
+© 2026 EvidentIS Inc. All rights reserved.

@@ -1,5 +1,5 @@
 """
-LexOS AI Evaluator
+EvidentIS AI Evaluator
 Core evaluation engine for testing AI model outputs against golden datasets
 """
 
@@ -452,7 +452,7 @@ async def run_ci_benchmark(output_path: str, model_version: str = "ci-baseline")
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run LexOS AI evaluation benchmark")
+    parser = argparse.ArgumentParser(description="Run EvidentIS AI evaluation benchmark")
     parser.add_argument("--output", default="evaluation-results.json", help="Path to write evaluation results JSON")
     parser.add_argument("--model-version", default="ci-baseline", help="Model version label for the result payload")
     return parser

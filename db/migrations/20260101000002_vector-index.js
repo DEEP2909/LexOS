@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /**
- * LexOS Vector Index Migration
+ * EvidentIS Vector Index Migration
  * Migration: 20260101000002_vector-index.js
  * 
  * Creates IVFFlat index for fast vector similarity search.

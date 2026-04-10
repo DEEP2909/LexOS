@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LexOS Document Viewer
+ * EvidentIS Document Viewer
  * PDF viewer with annotation support using react-pdf
  */
 

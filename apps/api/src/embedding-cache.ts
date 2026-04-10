@@ -1,5 +1,5 @@
 /**
- * LexOS Embedding Cache
+ * EvidentIS Embedding Cache
  * Redis-based caching for embeddings and search results
  */
 
@@ -32,9 +32,9 @@ function getRedis(): Redis {
 // ============================================================================
 
 const CACHE_VERSION = 'v1';
-const EMBEDDING_PREFIX = `lexos:${CACHE_VERSION}:embedding`;
-const SEARCH_PREFIX = `lexos:${CACHE_VERSION}:search`;
-const DOCUMENT_PREFIX = `lexos:${CACHE_VERSION}:doc`;
+const EMBEDDING_PREFIX = `evidentis:${CACHE_VERSION}:embedding`;
+const SEARCH_PREFIX = `evidentis:${CACHE_VERSION}:search`;
+const DOCUMENT_PREFIX = `evidentis:${CACHE_VERSION}:doc`;
 
 function hashText(text: string): string {
   return crypto.createHash('sha256').update(text).digest('hex').slice(0, 16);
@@ -255,7 +255,7 @@ export async function invalidateTenantSearchCache(tenantId: string): Promise<voi
 // Rate Limit Helper (per-tenant AI quota)
 // ============================================================================
 
-const AI_QUOTA_PREFIX = `lexos:${CACHE_VERSION}:aiquota`;
+const AI_QUOTA_PREFIX = `evidentis:${CACHE_VERSION}:aiquota`;
 
 interface AIQuotaUsage {
   tokensUsed: number;

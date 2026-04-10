@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Health Router
+EvidentIS AI Service - Health Router
 Health check endpoints.
 """
 
@@ -87,5 +87,5 @@ async def readiness(request: Request) -> Dict[str, Any]:
 @router.get("/health/version")
 async def version() -> dict:
     """Return service version info."""
-    return {"version": "1.0.0", "service": "lexos-ai-service"}
+    return {"version": "1.0.0", "service": "evidentis-ai-service"}
 

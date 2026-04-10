@@ -1,5 +1,5 @@
 /**
- * LexOS API Server
+ * EvidentIS (Evidence-Based Intelligent Decision System) API Server
  * Main entry point for the Fastify API server
  */
 

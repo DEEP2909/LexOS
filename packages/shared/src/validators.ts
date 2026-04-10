@@ -1,5 +1,5 @@
 /**
- * LexOS Shared Validators
+ * EvidentIS Shared Validators
  * Zod schemas for validation across API and frontend
  */
 

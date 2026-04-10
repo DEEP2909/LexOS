@@ -19,7 +19,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@lexos/shared": ["../../packages/shared/src"]
+      "@evidentis/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

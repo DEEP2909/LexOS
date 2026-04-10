@@ -1,9 +1,9 @@
 /* eslint-disable camelcase */
 /**
- * LexOS Initial Database Schema
+ * EvidentIS Initial Database Schema
  * Migration: 20260101000000_initial-schema.js
  * 
- * Creates all core tables for the LexOS legal SaaS platform.
+ * Creates all core tables for the EvidentIS legal SaaS platform.
  * Uses pgvector for embeddings, enforces tenant isolation.
  */
 

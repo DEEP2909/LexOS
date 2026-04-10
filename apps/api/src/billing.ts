@@ -1,5 +1,5 @@
 /**
- * LexOS Stripe Billing Integration
+ * EvidentIS Stripe Billing Integration
  * Full subscription management with Checkout and Customer Portal
  */
 

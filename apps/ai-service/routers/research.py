@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Research Router
+EvidentIS AI Service - Research Router
 Semantic legal research with RAG (Retrieval Augmented Generation).
 """
 

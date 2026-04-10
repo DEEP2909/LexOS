@@ -1,11 +1,11 @@
-# LexOS Production Docker Compose
+# EvidentIS Production Docker Compose
 # Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 version: '3.9'
 
 x-common-labels: &common-labels
-  com.lexos.environment: production
-  com.lexos.version: ${LEXOS_VERSION:-1.0.0}
+  com.evidentis.environment: production
+  com.evidentis.version: ${EVIDENTIS_VERSION:-1.0.0}
 
 x-logging: &logging
   driver: json-file
@@ -29,7 +29,7 @@ services:
       dockerfile: apps/api/Dockerfile
       args:
         NODE_ENV: production
-    image: lexos/api:${LEXOS_VERSION:-latest}
+    image: evidentis/api:${EVIDENTIS_VERSION:-latest}
     deploy:
       mode: replicated
       replicas: 3
@@ -81,7 +81,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       # Telemetry
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
-      OTEL_SERVICE_NAME: lexos-api
+      OTEL_SERVICE_NAME: evidentis-api
       # Security settings
       RATE_LIMIT_ENABLED: 'true'
       CORS_ORIGINS: ${CORS_ORIGINS}
@@ -124,7 +124,7 @@ services:
       args:
         NODE_ENV: production
         NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
-    image: lexos/web:${LEXOS_VERSION:-latest}
+    image: evidentis/web:${EVIDENTIS_VERSION:-latest}
     deploy:
       mode: replicated
       replicas: 2
@@ -177,7 +177,7 @@ services:
       dockerfile: apps/ai-service/Dockerfile
       args:
         ENVIRONMENT: production
-    image: lexos/ai-service:${LEXOS_VERSION:-latest}
+    image: evidentis/ai-service:${EVIDENTIS_VERSION:-latest}
     deploy:
       mode: replicated
       replicas: 2
@@ -209,7 +209,7 @@ services:
       LLM_TEMPERATURE: 0.1
       # Telemetry
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
-      OTEL_SERVICE_NAME: lexos-ai-service
+      OTEL_SERVICE_NAME: evidentis-ai-service
     healthcheck:
       <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -228,7 +228,7 @@ services:
       dockerfile: apps/ai-worker/Dockerfile
       args:
         ENVIRONMENT: production
-    image: lexos/ai-worker:${LEXOS_VERSION:-latest}
+    image: evidentis/ai-worker:${EVIDENTIS_VERSION:-latest}
     deploy:
       mode: replicated
       replicas: 4
@@ -263,7 +263,7 @@ services:
       CLAMAV_PORT: 3310
       # Telemetry
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
-      OTEL_SERVICE_NAME: lexos-ai-worker
+      OTEL_SERVICE_NAME: evidentis-ai-worker
     command: celery -A celery_app worker -l INFO -c 4 -Q default,documents,embedding,analysis,notifications
     stop_grace_period: 60s
     labels:
@@ -279,7 +279,7 @@ services:
     build:
       context: .
       dockerfile: apps/ai-worker/Dockerfile
-    image: lexos/ai-worker:${LEXOS_VERSION:-latest}
+    image: evidentis/ai-worker:${EVIDENTIS_VERSION:-latest}
     deploy:
       mode: replicated
       replicas: 1
@@ -318,8 +318,8 @@ services:
         constraints:
           - node.labels.db == true
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-lexos}
-      POSTGRES_USER: ${POSTGRES_USER:-lexos}
+      POSTGRES_DB: ${POSTGRES_DB:-evidentis}
+      POSTGRES_USER: ${POSTGRES_USER:-evidentis}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       # Performance tuning
       POSTGRES_INITDB_ARGS: "--data-checksums"
@@ -363,7 +363,7 @@ services:
       - ./certs/postgres:/etc/ssl/private:ro
     healthcheck:
       <<: *healthcheck-defaults
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lexos} -d ${POSTGRES_DB:-lexos}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-evidentis} -d ${POSTGRES_DB:-evidentis}"]
     secrets:
       - postgres_password
     labels:
@@ -541,13 +541,13 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /data/lexos/postgres
+      device: /data/evidentis/postgres
   redis_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /data/lexos/redis
+      device: /data/evidentis/redis
   clamav_data:
     driver: local
   traefik_letsencrypt:

@@ -1,8 +1,8 @@
 {
-  "name": "lexos",
+  "name": "evidentis",
   "version": "1.0.0",
   "private": true,
-  "description": "LexOS - Enterprise Legal AI Platform for USA Law Firms",
+  "description": "EvidentIS - Enterprise Legal AI Platform for USA Law Firms",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -35,6 +35,6 @@
     "cross-spawn": "7.0.5",
     "minimatch": "9.0.7"
   },
-  "author": "LexOS Team",
+  "author": "EvidentIS Team",
   "license": "UNLICENSED"
 }

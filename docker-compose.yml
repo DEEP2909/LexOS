@@ -6,30 +6,30 @@ services:
   # ============================================================
   postgres:
     image: pgvector/pgvector:0.8.0-pg16
-    container_name: lexos-postgres
+    container_name: evidentis-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: lexos
-      POSTGRES_USER: lexos
-      POSTGRES_PASSWORD: lexos_dev_password
+      POSTGRES_DB: evidentis
+      POSTGRES_USER: evidentis
+      POSTGRES_PASSWORD: evidentis_dev_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lexos"]
+      test: ["CMD-SHELL", "pg_isready -U evidentis"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Redis for BullMQ and caching
   # ============================================================
   redis:
     image: redis:7-alpine
-    container_name: lexos-redis
+    container_name: evidentis-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -41,14 +41,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # MinIO (S3-compatible object storage for local dev)
   # ============================================================
   minio:
     image: minio/minio:latest
-    container_name: lexos-minio
+    container_name: evidentis-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -65,14 +65,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # ClamAV Antivirus Scanner
   # ============================================================
   clamav:
     image: clamav/clamav:1.3
-    container_name: lexos-clamav
+    container_name: evidentis-clamav
     restart: unless-stopped
     ports:
       - "3310:3310"
@@ -85,14 +85,14 @@ services:
       retries: 5
       start_period: 120s
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Ollama LLM Server (optional - enable with --profile llm)
   # ============================================================
   ollama:
     image: ollama/ollama:latest
-    container_name: lexos-ollama
+    container_name: evidentis-ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -106,7 +106,7 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Python AI Service (FastAPI)
@@ -115,7 +115,7 @@ services:
     build:
       context: ./apps/ai-service
       dockerfile: Dockerfile
-    container_name: lexos-ai-service
+    container_name: evidentis-ai-service
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -138,7 +138,7 @@ services:
       retries: 5
       start_period: 60s
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Python Celery AI Worker
@@ -147,7 +147,7 @@ services:
     build:
       context: ./apps/ai-worker
       dockerfile: Dockerfile
-    container_name: lexos-ai-worker
+    container_name: evidentis-ai-worker
     restart: unless-stopped
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/1
@@ -158,7 +158,7 @@ services:
       ai-service:
         condition: service_healthy
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Node.js API Server (Fastify)
@@ -167,7 +167,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile.api
-    container_name: lexos-api
+    container_name: evidentis-api
     restart: unless-stopped
     ports:
       - "4000:4000"
@@ -181,12 +181,12 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - DATABASE_URL=postgresql://lexos:lexos_dev_password@postgres:5432/lexos
+      - DATABASE_URL=postgresql://evidentis:evidentis_dev_password@postgres:5432/evidentis
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:5000
       - STORAGE_BACKEND=s3
       - S3_ENDPOINT=http://minio:9000
-      - S3_BUCKET=lexos-documents
+      - S3_BUCKET=evidentis-documents
       - S3_ACCESS_KEY=minio_admin
       - S3_SECRET_KEY=minio_dev_password
       - MALWARE_SCANNER=clamav
@@ -202,7 +202,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Node.js BullMQ Worker
@@ -211,7 +211,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile.api
-    container_name: lexos-worker
+    container_name: evidentis-worker
     restart: unless-stopped
     command: ["node", "dist/worker-main.js"]
     depends_on:
@@ -219,12 +219,12 @@ services:
         condition: service_healthy
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://lexos:lexos_dev_password@postgres:5432/lexos
+      - DATABASE_URL=postgresql://evidentis:evidentis_dev_password@postgres:5432/evidentis
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:5000
       - STORAGE_BACKEND=s3
       - S3_ENDPOINT=http://minio:9000
-      - S3_BUCKET=lexos-documents
+      - S3_BUCKET=evidentis-documents
       - S3_ACCESS_KEY=minio_admin
       - S3_SECRET_KEY=minio_dev_password
       - MALWARE_SCANNER=clamav
@@ -233,7 +233,7 @@ services:
     volumes:
       - ./keys:/app/keys:ro
     networks:
-      - lexos-network
+      - evidentis-network
 
   # ============================================================
   # Next.js Frontend
@@ -242,7 +242,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile.web
-    container_name: lexos-web
+    container_name: evidentis-web
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -253,7 +253,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:4000
       - NEXT_PUBLIC_WS_URL=ws://localhost:4000
     networks:
-      - lexos-network
+      - evidentis-network
 
 volumes:
   postgres_data:
@@ -264,5 +264,5 @@ volumes:
   model_cache:
 
 networks:
-  lexos-network:
+  evidentis-network:
     driver: bridge

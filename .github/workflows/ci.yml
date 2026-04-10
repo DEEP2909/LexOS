@@ -16,8 +16,8 @@ jobs:
       postgres:
         image: pgvector/pgvector:0.8.0-pg16
         env:
-          POSTGRES_DB: lexos_test
-          POSTGRES_USER: lexos
+          POSTGRES_DB: evidentis_test
+          POSTGRES_USER: evidentis
           POSTGRES_PASSWORD: test_password
         options: >-
           --health-cmd pg_isready
@@ -50,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Build shared package
-        run: npm run build -w @lexos/shared
+        run: npm run build -w @evidentis/shared
 
       - name: Lint
         run: npm run lint
@@ -59,15 +59,15 @@ jobs:
         run: npm run typecheck
 
       - name: Run API migrations
-        run: npm run migrate:up -w @lexos/api
+        run: npm run migrate:up -w @evidentis/api
         env:
-          DATABASE_URL: postgresql://lexos:test_password@localhost:5432/lexos_test
+          DATABASE_URL: postgresql://evidentis:test_password@localhost:5432/evidentis_test
           NODE_ENV: test
 
       - name: Run tests with coverage
-        run: npm run test:coverage:ci -w @lexos/api
+        run: npm run test:coverage:ci -w @evidentis/api
         env:
-          DATABASE_URL: postgresql://lexos:test_password@localhost:5432/lexos_test
+          DATABASE_URL: postgresql://evidentis:test_password@localhost:5432/evidentis_test
           REDIS_URL: redis://localhost:6379
           NODE_ENV: test
 
@@ -164,8 +164,8 @@ jobs:
       postgres:
         image: pgvector/pgvector:0.8.0-pg16
         env:
-          POSTGRES_DB: lexos_test
-          POSTGRES_USER: lexos
+          POSTGRES_DB: evidentis_test
+          POSTGRES_USER: evidentis
           POSTGRES_PASSWORD: test_password
         options: >-
           --health-cmd pg_isready
@@ -189,17 +189,17 @@ jobs:
         run: npm ci
 
       - name: Build shared package
-        run: npm run build -w @lexos/shared
+        run: npm run build -w @evidentis/shared
 
       - name: Run migrations
-        run: npm run migrate:up -w @lexos/api
+        run: npm run migrate:up -w @evidentis/api
         env:
-          DATABASE_URL: postgresql://lexos:test_password@localhost:5432/lexos_test
+          DATABASE_URL: postgresql://evidentis:test_password@localhost:5432/evidentis_test
 
       - name: Run tenant isolation tests
-        run: npm run test:isolation -w @lexos/api
+        run: npm run test:isolation -w @evidentis/api
         env:
-          DATABASE_URL: postgresql://lexos:test_password@localhost:5432/lexos_test
+          DATABASE_URL: postgresql://evidentis:test_password@localhost:5432/evidentis_test
           NODE_ENV: test
 
   # ============================================================
@@ -220,7 +220,7 @@ jobs:
           context: .
           file: apps/api/Dockerfile.api
           push: false
-          tags: lexos-api:test
+          tags: evidentis-api:test
 
       - name: Build Web image
         uses: docker/build-push-action@v6
@@ -228,7 +228,7 @@ jobs:
           context: .
           file: apps/web/Dockerfile.web
           push: false
-          tags: lexos-web:test
+          tags: evidentis-web:test
 
       - name: Build AI Service image
         uses: docker/build-push-action@v6
@@ -236,7 +236,7 @@ jobs:
           context: apps/ai-service
           file: apps/ai-service/Dockerfile
           push: false
-          tags: lexos-ai-service:test
+          tags: evidentis-ai-service:test
 
   # ============================================================
   # Container Security Scanning
@@ -258,12 +258,12 @@ jobs:
           file: apps/api/Dockerfile.api
           push: false
           load: true
-          tags: lexos-api:scan
+          tags: evidentis-api:scan
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'lexos-api:scan'
+          image-ref: 'evidentis-api:scan'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -297,7 +297,7 @@ jobs:
         run: npm run build
 
       - name: Run E2E smoke tests
-        run: npm run test:e2e:ci -w @lexos/web
+        run: npm run test:e2e:ci -w @evidentis/web
         env:
           CI: true
 

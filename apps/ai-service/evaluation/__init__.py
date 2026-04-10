@@ -1,5 +1,5 @@
 """
-LexOS AI Evaluation Framework
+EvidentIS AI Evaluation Framework
 Golden datasets, scoring scripts, and regression testing for AI outputs
 """
 

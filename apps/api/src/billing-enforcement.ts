@@ -1,5 +1,5 @@
 /**
- * LexOS Billing Enforcement Middleware
+ * EvidentIS Billing Enforcement Middleware
  * Quota enforcement for documents and AI operations
  */
 

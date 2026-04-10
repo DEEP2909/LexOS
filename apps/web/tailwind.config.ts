@@ -18,7 +18,7 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // LexOS Brand Colors
+        // EvidentIS Brand Colors
         navy: {
           DEFAULT: '#0A1628',
           light: '#112240',

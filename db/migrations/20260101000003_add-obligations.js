@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /**
- * LexOS Obligations Migration
+ * EvidentIS Obligations Migration
  * Migration: 20260101000003_add-obligations.js
  * 
  * Creates tables for obligation tracking and clause suggestions:

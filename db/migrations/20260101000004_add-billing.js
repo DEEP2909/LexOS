@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /**
- * LexOS Billing & Quotas Migration
+ * EvidentIS Billing & Quotas Migration
  * Migration: 20260101000004_add-billing.js
  * 
  * Creates tables for billing, AI quotas, and subscription management:

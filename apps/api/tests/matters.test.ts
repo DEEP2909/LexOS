@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 2: Matters & Documents Tests
+ * EvidentIS API Test Suite - Part 2: Matters & Documents Tests
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';

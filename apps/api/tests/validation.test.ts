@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 8: Input Validation, Edge Cases, Error Handling
+ * EvidentIS API Test Suite - Part 8: Input Validation, Edge Cases, Error Handling
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';

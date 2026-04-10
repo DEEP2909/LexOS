@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Comprehensive Test Suite
+EvidentIS AI Service - Comprehensive Test Suite
 Tests for OCR, Embeddings, Clause Extraction, Risk Assessment, Research, and Obligations
 """
 

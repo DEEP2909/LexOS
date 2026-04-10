@@ -1,5 +1,5 @@
 /**
- * LexOS Security Module
+ * EvidentIS Security Module
  * Cryptographic utilities for password hashing, encryption, and token generation
  */
 

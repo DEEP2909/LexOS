@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /**
- * LexOS Auth Tables Migration
+ * EvidentIS Auth Tables Migration
  * Migration: 20260101000001_auth-tables.js
  * 
  * Creates all authentication-related tables:

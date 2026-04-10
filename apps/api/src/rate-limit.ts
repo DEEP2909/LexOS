@@ -1,5 +1,5 @@
 /**
- * LexOS Rate Limiting & Abuse Protection
+ * EvidentIS Rate Limiting & Abuse Protection
  * Redis-based rate limiter with per-user and per-tenant quotas
  */
 

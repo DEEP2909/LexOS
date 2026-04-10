@@ -1,5 +1,5 @@
 /**
- * LexOS BullMQ Worker
+ * EvidentIS BullMQ Worker
  * Background job processing for document pipeline
  * MUST handle SIGTERM gracefully - drain in-flight jobs before exit
  */
@@ -714,7 +714,7 @@ async function triggerWebhooks(tenantId: string, eventType: string, payload: any
         data: payload,
       }, {
         headers: {
-          'X-LexOS-Signature': `t=${timestamp},v1=${signature}`,
+          'X-EvidentIS-Signature': `t=${timestamp},v1=${signature}`,
           'Content-Type': 'application/json',
         },
         timeout: 10000,

@@ -1,5 +1,5 @@
 """
-LexOS AI Service - Clause Extraction Router
+EvidentIS AI Service - Clause Extraction Router
 Extract legal clauses from document text using NLP and LLM.
 """
 

@@ -1,5 +1,5 @@
 /**
- * LexOS API Test Suite - Part 1: Authentication Tests
+ * EvidentIS API Test Suite - Part 1: Authentication Tests
  * Comprehensive testing for all auth endpoints and security
  */
 

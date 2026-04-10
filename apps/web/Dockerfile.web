@@ -1,5 +1,5 @@
 # ============================================================
-# LexOS Web Dockerfile
+# EvidentIS Web Dockerfile
 # Next.js Frontend Application
 # ============================================================
 
@@ -13,18 +13,18 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
-RUN npm ci --workspace=@lexos/shared --workspace=@lexos/web
+RUN npm ci --workspace=@evidentis/shared --workspace=@evidentis/web
 
 # Copy source code
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
 # Build shared package first
-RUN npm run build -w @lexos/shared
+RUN npm run build -w @evidentis/shared
 
 # Build Next.js app
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build -w @lexos/web
+RUN npm run build -w @evidentis/web
 
 # ============================================================
 # Production image

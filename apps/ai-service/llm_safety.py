@@ -1,5 +1,5 @@
 """
-LexOS LLM Safety Layer
+EvidentIS LLM Safety Layer
 Circuit breaker, retry logic, timeouts, and fallback models for resilient AI calls
 """
 

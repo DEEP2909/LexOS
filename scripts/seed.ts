@@ -1,5 +1,5 @@
 /**
- * LexOS Database Seed Script
+ * EvidentIS Database Seed Script
  * Creates demo data for development and testing
  * 
  * Usage: SEED_DEMO_DATA=true npm run db:seed
@@ -14,7 +14,7 @@ import bcrypt from 'bcrypt';
 // CONFIGURATION
 // ============================================================================
 
-const DEMO_PASSWORD = 'LexOS2026Demo!';
+const DEMO_PASSWORD = 'EvidentIS2026Demo!';
 const SALT_ROUNDS = 10;
 
 const US_STATES = [
@@ -338,7 +338,7 @@ async function seedObligations(pool: Pool, matters: DemoMatter[], attorneys: Dem
 
 async function main(): Promise<void> {
   console.log('\n╔═══════════════════════════════════════════╗');
-  console.log('║        LexOS Demo Data Seeding            ║');
+  console.log('║        EvidentIS Demo Data Seeding            ║');
   console.log('╚═══════════════════════════════════════════╝\n');
   
   // Safety check

@@ -152,7 +152,7 @@ export default function PortalPage() {
             <div className="h-12 w-12 rounded-xl bg-[hsl(var(--navy))] flex items-center justify-center">
               <Scale className="h-7 w-7 text-[hsl(var(--gold))]" />
             </div>
-            <span className="text-2xl font-bold">LexOS</span>
+            <span className="text-2xl font-bold">EvidentIS</span>
           </div>
 
           <Card>
@@ -187,7 +187,7 @@ export default function PortalPage() {
               <div className="h-10 w-10 rounded-xl bg-[hsl(var(--navy))] flex items-center justify-center">
                 <Scale className="h-6 w-6 text-[hsl(var(--gold))]" />
               </div>
-              <span className="text-xl font-bold">LexOS</span>
+              <span className="text-xl font-bold">EvidentIS</span>
               <Badge variant="secondary" className="ml-2">
                 <Shield className="h-3 w-3 mr-1" />
                 Secure Portal
@@ -400,7 +400,7 @@ export default function PortalPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>
-              This content is shared securely via LexOS. Access is logged and monitored.
+              This content is shared securely via EvidentIS. Access is logged and monitored.
             </p>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />

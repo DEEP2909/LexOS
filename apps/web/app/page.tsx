@@ -32,7 +32,7 @@ export default function HomePage() {
           </div>
           <Loader2 className="absolute -bottom-1 -right-1 h-6 w-6 animate-spin text-[hsl(var(--gold))]" />
         </div>
-        <p className="text-muted-foreground">Loading LexOS...</p>
+        <p className="text-muted-foreground">Loading EvidentIS...</p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 /**
- * LexOS API Client
+ * EvidentIS API Client
  * Type-safe API client with automatic token refresh
  */
 
@@ -14,7 +14,7 @@ import type {
   LoginResponse,
   PaginatedResponse,
   RiskLevel,
-} from "@lexos/shared";
+} from "@evidentis/shared";
 
 // API base URL
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -31,8 +31,8 @@ export function setTokens(access: string, refresh: string): void {
   refreshToken = refresh;
   // Store in localStorage for persistence
   if (typeof window !== "undefined") {
-    localStorage.setItem("lexos_access_token", access);
-    localStorage.setItem("lexos_refresh_token", refresh);
+    localStorage.setItem("evidentis_access_token", access);
+    localStorage.setItem("evidentis_refresh_token", refresh);
   }
 }
 
@@ -41,8 +41,8 @@ export function setTokens(access: string, refresh: string): void {
  */
 export function loadTokens(): void {
   if (typeof window !== "undefined") {
-    accessToken = localStorage.getItem("lexos_access_token");
-    refreshToken = localStorage.getItem("lexos_refresh_token");
+    accessToken = localStorage.getItem("evidentis_access_token");
+    refreshToken = localStorage.getItem("evidentis_refresh_token");
   }
 }
 
@@ -53,8 +53,8 @@ export function clearTokens(): void {
   accessToken = null;
   refreshToken = null;
   if (typeof window !== "undefined") {
-    localStorage.removeItem("lexos_access_token");
-    localStorage.removeItem("lexos_refresh_token");
+    localStorage.removeItem("evidentis_access_token");
+    localStorage.removeItem("evidentis_refresh_token");
   }
 }
 

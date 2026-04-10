@@ -1,5 +1,5 @@
 /**
- * LexOS API Routes
+ * EvidentIS API Routes
  * All REST API endpoints
  */
 
@@ -619,7 +619,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/auth/mfa/setup', { preHandler: authenticateRequest }, async (request) => {
     const authReq = request as AuthenticatedRequest;
     const secret = generateSecureToken(20).toUpperCase();
-    const issuer = encodeURIComponent('LexOS');
+    const issuer = encodeURIComponent('EvidentIS');
     const label = encodeURIComponent(authReq.tokenPayload.email);
     const qrCodeUrl = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}`;
 
@@ -2256,13 +2256,13 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const icalDate = `${new Date(obligation.deadline).toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
     const ical = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//LexOS//Legal Platform//EN
+PRODID:-//EvidentIS//Legal Platform//EN
 BEGIN:VEVENT
-UID:${obligation.id}@lexos.law
+UID:${obligation.id}@evidentis.law
 DTSTAMP:${icalDate}
 DTSTART:${icalDate}
 SUMMARY:${obligation.matter_name} - ${obligation.description}
-DESCRIPTION:Legal obligation from LexOS
+DESCRIPTION:Legal obligation from EvidentIS
 END:VEVENT
 END:VCALENDAR`;
 

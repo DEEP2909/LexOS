@@ -1,5 +1,5 @@
 /**
- * LexOS WebSocket Real-time Events
+ * EvidentIS WebSocket Real-time Events
  * Socket.io implementation for live updates
  */
 

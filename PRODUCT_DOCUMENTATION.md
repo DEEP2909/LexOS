@@ -1,4 +1,4 @@
-# LexOS - Complete Product Documentation
+# EvidentIS: Evidence-Based Intelligent Decision System - Complete Product Documentation
 
 ## Enterprise Legal AI Platform - Full Technical & Product Reference
 
@@ -39,9 +39,11 @@
 
 # 1. Executive Summary
 
-## 1.1 What is LexOS?
+## 1.1 What is EvidentIS?
 
-LexOS is an enterprise-grade, multi-tenant Legal AI SaaS platform designed specifically for USA-based law firms. It leverages advanced artificial intelligence to automate contract analysis, legal research, risk assessment, and compliance monitoring.
+**EvidentIS** stands for **Evidence-Based Intelligent Decision System**.
+
+EvidentIS is an enterprise-grade, multi-tenant Legal AI SaaS platform designed specifically for USA-based law firms. It leverages advanced artificial intelligence to automate contract analysis, legal research, risk assessment, and compliance monitoring.
 
 ## 1.2 Mission Statement
 
@@ -155,7 +157,7 @@ To empower legal professionals with AI-driven tools that enhance productivity, r
 ```
 Attorney receives vendor contract
     ↓
-Upload to LexOS
+Upload to EvidentIS
     ↓
 Automatic malware scan (infected uploads are quarantined and admins are notified)
     ↓
@@ -708,7 +710,7 @@ Response with Sources
 ## 5.4 File Structure
 
 ```
-lexos/
+evidentis/
 ├── .env.example                    # Environment template
 ├── .github/
 │   └── workflows/
@@ -1987,7 +1989,7 @@ export function createTenantScopedQuery(tenantId: string) {
 ### 10.1.3 Storage-Level
 ```
 S3 Bucket Structure:
-lexos-documents/
+evidentis-documents/
 ├── {tenant_id_1}/
 │   ├── documents/
 │   └── exports/
@@ -2130,11 +2132,11 @@ describe('Tenant Isolation', () => {
 
 ### 11.3.1 SAML 2.0 Flow
 ```
-1. User accesses LexOS
+1. User accesses EvidentIS
 2. Redirect to IdP (Okta, Azure AD, etc.)
 3. User authenticates at IdP
-4. IdP sends SAML assertion to LexOS
-5. LexOS validates assertion signature
+4. IdP sends SAML assertion to EvidentIS
+5. EvidentIS validates assertion signature
 6. Extract user attributes (email, groups)
 7. Create/update attorney record
 8. Issue JWT tokens
@@ -2529,7 +2531,7 @@ CELERY_BEAT_SCHEDULE = {
 ### 15.3.1 OpenTelemetry Integration
 ```typescript
 // Automatic instrumentation
-const tracer = opentelemetry.trace.getTracer('lexos-api');
+const tracer = opentelemetry.trace.getTracer('evidentis-api');
 
 // Custom spans
 app.addHook('preHandler', (req, reply, done) => {
@@ -2561,7 +2563,7 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ### 15.4.2 Notification Channels
 - PagerDuty (critical)
-- Slack (#lexos-alerts)
+- Slack (#evidentis-alerts)
 - Email (daily digest)
 
 ---
@@ -2608,7 +2610,7 @@ app.addHook('preHandler', (req, reply, done) => {
 
 ## 16.2.4 Harness Notes
 - The web build depends on Next.js standalone output and a committed `apps/web/public/` directory so the Docker runner can copy both `/public` and `.next/standalone`.
-- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts` (sets `NODE_ENV=test` to suppress pino-pretty); node-pg-migrate is configured in `apps/api/package.json` to read `../../db/migrations`, and CI applies `npm run migrate:up -w @lexos/api` before the Node coverage run so the test schema exists before suite startup. The logger uses `=== 'development'` to guard pino-pretty so test and production both get plain JSON output.
+- API tests are wired through `apps/api/vitest.config.ts` and `apps/api/tests/setup.ts` (sets `NODE_ENV=test` to suppress pino-pretty); node-pg-migrate is configured in `apps/api/package.json` to read `../../db/migrations`, and CI applies `npm run migrate:up -w @evidentis/api` before the Node coverage run so the test schema exists before suite startup. The logger uses `=== 'development'` to guard pino-pretty so test and production both get plain JSON output.
 - API tests still require reachable Postgres and Redis services when executed end to end.
 - AI-service pytest collection is wired through `apps/ai-service/tests/conftest.py` and `apps/ai-service/pytest.ini`, and the pinned dependency stack is intended for Python 3.11.
 - The AI-service Docker image uses Debian Trixie-compatible `libgl1` packages in both build and runtime stages.
@@ -2655,13 +2657,13 @@ pytest tests/ --cov=. --cov-config=.coveragerc --cov-report=json
 | Environment | Purpose | URL |
 |-------------|---------|-----|
 | Development | Local dev | localhost |
-| Staging | Pre-production | staging.lexos.ai |
-| Production | Live system | app.lexos.ai |
+| Staging | Pre-production | staging.evidentis.tech |
+| Production | Live system | app.evidentis.tech |
 
 ## 17.2 Infrastructure
 
 ### 17.2.1 Kubernetes Resources
-- **Namespace**: lexos
+- **Namespace**: evidentis
 - **Deployments**: api (3), web (3), ai-service (2), worker (3)
 - **Services**: ClusterIP for internal, LoadBalancer for ingress
 - **HPA**: API autoscaling (3-20 pods) based on CPU/memory
@@ -2974,18 +2976,18 @@ See Section 6.1 for entity relationship diagram.
 
 | Issue Type | Contact |
 |------------|---------|
-| Technical Support | support@lexos.ai |
-| Security Issues | security@lexos.ai |
-| Enterprise Sales | enterprise@lexos.ai |
-| Partnership | partners@lexos.ai |
+| Technical Support | support@evidentis.tech |
+| Security Issues | security@evidentis.tech |
+| Enterprise Sales | enterprise@evidentis.tech |
+| Partnership | partners@evidentis.tech |
 
 ---
 
 **Document Version**: 1.0.0  
 **Last Updated**: April 9, 2026  
-**Authors**: LexOS Engineering Team  
+**Authors**: EvidentIS Engineering Team  
 **Classification**: Internal / Partner Documentation
 
 ---
 
-© 2026 LexOS Inc. All rights reserved.
+© 2026 EvidentIS Inc. All rights reserved.

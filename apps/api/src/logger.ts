@@ -1,5 +1,5 @@
 /**
- * LexOS Logger
+ * EvidentIS Logger
  * Structured JSON logging with pino
  */
 
@@ -20,7 +20,7 @@ export const logger = pino({
         }
       : undefined,
   base: {
-    service: 'lexos-api',
+    service: 'evidentis-api',
     env: config.NODE_ENV,
   },
   redact: {

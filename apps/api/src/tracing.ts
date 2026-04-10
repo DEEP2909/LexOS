@@ -1,5 +1,5 @@
 /**
- * LexOS OpenTelemetry Tracing
+ * EvidentIS OpenTelemetry Tracing
  * Required per spec: OpenTelemetry spans on ALL DB queries, AI calls, job processing
  */
 
@@ -15,7 +15,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { trace, context, SpanStatusCode, type Span, SpanKind, type Tracer } from '@opentelemetry/api';
 import { config } from './config.js';
 
-const SERVICE_NAME = config.OTEL_SERVICE_NAME || 'lexos-api';
+const SERVICE_NAME = config.OTEL_SERVICE_NAME || 'evidentis-api';
 const SERVICE_VERSION = '1.0.0';
 
 // Initialize SDK
@@ -138,7 +138,7 @@ export async function traceAiCall<T>(
     span.setAttributes({
       'ai.endpoint': endpoint,
       'ai.model': model,
-      'ai.service': 'lexos-ai-service',
+      'ai.service': 'evidentis-ai-service',
     });
     const startTime = Date.now();
     const result = await fn();

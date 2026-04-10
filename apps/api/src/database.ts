@@ -1,5 +1,5 @@
 /**
- * LexOS Database Connection
+ * EvidentIS Database Connection
  * PostgreSQL connection pool with proper connection management
  */
 

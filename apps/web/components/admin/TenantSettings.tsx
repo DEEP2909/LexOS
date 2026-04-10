@@ -159,7 +159,7 @@ export function TenantSettingsPanel({
                     disabled={!isOwner}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Your URL: app.lexos.ai/{localSettings.slug}
+                    Your URL: app.evidentis.tech/{localSettings.slug}
                   </p>
                 </div>
               </div>

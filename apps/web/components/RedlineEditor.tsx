@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LexOS Contract Redline Editor
+ * EvidentIS Contract Redline Editor
  * Tiptap-based rich text editor with track changes
  */
 
