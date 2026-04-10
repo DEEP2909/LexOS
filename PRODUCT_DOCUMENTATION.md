@@ -641,7 +641,7 @@ Response with Sources
 | Component | Technology | Version |
 |-----------|------------|---------|
 | Runtime | Python | 3.11 |
-| Framework | FastAPI | 0.116.x |
+| Framework | FastAPI | 0.121.x |
 | Embedding | sentence-transformers | 3.x |
 | OCR | Tesseract/EasyOCR/PaddleOCR | - |
 | LLM | Ollama | - |
