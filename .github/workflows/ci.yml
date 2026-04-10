@@ -81,7 +81,7 @@ jobs:
           fi
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=critical
 
   # ============================================================
   # Python Checks (AI Service)

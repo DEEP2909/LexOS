@@ -2,7 +2,7 @@
 # Python FastAPI service for AI/ML capabilities
 
 # Core Framework
-fastapi==0.115.0
+fastapi==0.116.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
@@ -11,7 +11,7 @@ pydantic-settings==2.5.2
 sentence-transformers==3.1.1
 spacy==3.7.6
 torch==2.4.1
-transformers==4.45.1
+transformers==4.49.0
 langdetect==1.0.9
 
 # OCR
