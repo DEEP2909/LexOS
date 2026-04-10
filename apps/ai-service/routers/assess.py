@@ -12,11 +12,19 @@ import httpx
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from llm_safety import RetryConfig, retry_with_backoff
 from prompts import RISK_ASSESSMENT, validate_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+LLM_RETRY_CONFIG = RetryConfig(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 
 class RiskLevel(str, Enum):
@@ -331,48 +339,54 @@ For each playbook rule, return:
 
 Return ONLY a JSON array of rule assessments. No other text."""
 
-    try:
+    payload: Dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": 0.1},
+    }
+
+    async def _call_llm() -> Dict[str, Any]:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{ollama_url}/api/generate",
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.1}
-                }
+                json=payload,
             )
-            
             if response.status_code != 200:
-                return []
-            
-            result = response.json()
-            response_text = result.get("response", "[]")
-            if not validate_response(response_text, "json"):
-                logger.error("Risk assessment model returned non-JSON content")
-                return []
-            assessments = json.loads(response_text)
-            
-            if isinstance(assessments, dict) and "assessments" in assessments:
-                assessments = assessments["assessments"]
-            
-            flags = []
-            for assessment in assessments:
-                if assessment.get("applies"):
-                    rule = next((r for r in applicable_rules if r.id == assessment.get("rule_id")), None)
-                    if rule:
-                        flags.append(Flag(
-                            clause_id=clause.id,
-                            rule_id=rule.id,
-                            risk_level=rule.risk_level,
-                            message=rule.message,
-                            suggested_edit=assessment.get("suggested_edit"),
-                            confidence=float(assessment.get("confidence", 0.7))
-                        ))
-            
-            return flags
-            
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            return response.json()
+
+    try:
+        result = await retry_with_backoff(
+            _call_llm,
+            config=LLM_RETRY_CONFIG,
+        )
+        response_text = result.get("response", "[]")
+        if not validate_response(response_text, "json"):
+            logger.error("Risk assessment model returned non-JSON content")
+            return []
+        assessments = json.loads(response_text)
+
+        if isinstance(assessments, dict) and "assessments" in assessments:
+            assessments = assessments["assessments"]
+
+        flags = []
+        for assessment in assessments:
+            if assessment.get("applies"):
+                rule = next((r for r in applicable_rules if r.id == assessment.get("rule_id")), None)
+                if rule:
+                    flags.append(Flag(
+                        clause_id=clause.id,
+                        rule_id=rule.id,
+                        risk_level=rule.risk_level,
+                        message=rule.message,
+                        suggested_edit=assessment.get("suggested_edit"),
+                        confidence=float(assessment.get("confidence", 0.7))
+                    ))
+
+        return flags
+
     except Exception as e:
         logger.error(f"LLM assessment failed: {e}")
         return []

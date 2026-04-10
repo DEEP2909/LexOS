@@ -13,11 +13,19 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from explainability import explain_research_result
+from llm_safety import RetryConfig, retry_with_backoff
 from prompts import RESEARCH_QUERY, add_safety_guardrails
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+LLM_RETRY_CONFIG = RetryConfig(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 
 class ResearchQuery(BaseModel):
@@ -121,7 +129,7 @@ async def generate_research_answer_stream(
     )
     prompt += "\n\nCite context snippets using [Source N] labels aligned to excerpt order."
 
-    try:
+    async def _read_llm_stream_lines() -> list[str]:
         async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream(
                 "POST",
@@ -133,38 +141,43 @@ async def generate_research_answer_stream(
                     "options": {
                         "temperature": 0.3,
                         "num_predict": 2048,
-                    }
-                }
+                    },
+                },
             ) as response:
                 if response.status_code != 200:
-                    yield f"data: {json.dumps({'error': 'LLM unavailable'})}\n\n"
-                    return
-                
-                async for line in response.aiter_lines():
-                    if line:
-                        try:
-                            data = json.loads(line)
-                            token = data.get("response", "")
-                            if token:
-                                yield f"data: {json.dumps({'token': token})}\n\n"
-                            if data.get("done"):
-                                break
-                        except json.JSONDecodeError:
-                            continue
-                
-                # Send citations at the end
-                citations = [
-                    {
-                        "document_id": c.document_id,
-                        "document_name": c.document_name,
-                        "chunk_id": c.chunk_id,
-                        "excerpt": c.text[:200] + "..." if len(c.text) > 200 else c.text,
-                        "relevance": c.relevance_score,
-                    }
-                    for c in chunks
-                ]
-                yield f"data: {json.dumps({'citations': citations, 'done': True})}\n\n"
-                
+                    raise RuntimeError(f"Ollama error: {response.status_code}")
+                return [line async for line in response.aiter_lines() if line]
+
+    try:
+        stream_lines = await retry_with_backoff(
+            _read_llm_stream_lines,
+            config=LLM_RETRY_CONFIG,
+        )
+
+        for line in stream_lines:
+            try:
+                data = json.loads(line)
+                token = data.get("response", "")
+                if token:
+                    yield f"data: {json.dumps({'token': token})}\n\n"
+                if data.get("done"):
+                    break
+            except json.JSONDecodeError:
+                continue
+
+        # Send citations at the end
+        citations = [
+            {
+                "document_id": c.document_id,
+                "document_name": c.document_name,
+                "chunk_id": c.chunk_id,
+                "excerpt": c.text[:200] + "..." if len(c.text) > 200 else c.text,
+                "relevance": c.relevance_score,
+            }
+            for c in chunks
+        ]
+        yield f"data: {json.dumps({'citations': citations, 'done': True})}\n\n"
+
     except Exception as e:
         logger.error(f"Research stream failed: {e}")
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -194,7 +207,7 @@ async def generate_research_answer(
     )
     prompt += "\n\nCite context snippets using [Source N] labels aligned to excerpt order."
 
-    try:
+    async def _call_llm() -> Dict[str, Any]:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{ollama_url}/api/generate",
@@ -205,18 +218,25 @@ async def generate_research_answer(
                     "options": {
                         "temperature": 0.3,
                         "num_predict": 2048,
-                    }
-                }
+                    },
+                },
             )
-            
             if response.status_code != 200:
-                return "Research service temporarily unavailable.", 0.0
-            
-            result = response.json()
-            answer = add_safety_guardrails(result.get("response", "").strip())
-            
-            return answer, 0.8
-            
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            return response.json()
+
+    try:
+        result = await retry_with_backoff(
+            _call_llm,
+            config=LLM_RETRY_CONFIG,
+        )
+        answer = add_safety_guardrails(result.get("response", "").strip())
+        return answer, 0.8
+    except RuntimeError as e:
+        if str(e).startswith("Ollama error:"):
+            return "Research service temporarily unavailable.", 0.0
+        logger.error(f"Research generation failed: {e}")
+        return f"Research generation failed: {e}", 0.0
     except Exception as e:
         logger.error(f"Research generation failed: {e}")
         return f"Research generation failed: {e}", 0.0

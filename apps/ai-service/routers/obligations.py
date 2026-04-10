@@ -13,11 +13,19 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from llm_safety import RetryConfig, retry_with_backoff
 from prompts import OBLIGATION_EXTRACTION, validate_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+LLM_RETRY_CONFIG = RetryConfig(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 
 class ObligationType(str, Enum):
@@ -326,69 +334,75 @@ Return ONLY a JSON array where each item includes:
 
 No additional prose."""
 
-    try:
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": 0.1},
+    }
+
+    async def _call_llm() -> dict:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{ollama_url}/api/generate",
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.1}
-                }
+                json=payload,
             )
-            
             if response.status_code != 200:
-                return []
-            
-            result = response.json()
-            response_text = result.get("response", "[]")
-            if not validate_response(response_text, "json"):
-                logger.error("Obligation extraction model returned non-JSON content")
-                return []
-            obligations_data = json.loads(response_text)
-            
-            if isinstance(obligations_data, dict) and "obligations" in obligations_data:
-                obligations_data = obligations_data["obligations"]
-            
-            obligations: list[ExtractedObligation] = []
-            for i, item in enumerate(obligations_data):
-                source_text = item.get("source_text", "")
-                start = text.find(source_text[:50]) if source_text else 0
-                
-                try:
-                    obl_type = ObligationType(item.get("type", "other"))
-                except ValueError:
-                    obl_type = ObligationType.OTHER
-                
-                try:
-                    party = ObligationParty(item.get("party", "counterparty"))
-                except ValueError:
-                    party = ObligationParty.COUNTERPARTY
-                
-                try:
-                    recurrence = RecurrencePattern(item.get("recurrence", "once"))
-                except ValueError:
-                    recurrence = RecurrencePattern.ONCE
-                
-                obligations.append(ExtractedObligation(
-                    id=f"obl-llm-{i}",
-                    type=obl_type,
-                    party=party,
-                    description=item.get("description", ""),
-                    source_text=source_text,
-                    deadline=item.get("deadline"),
-                    recurrence=recurrence,
-                    trigger_event=item.get("trigger_event"),
-                    penalty=item.get("penalty"),
-                    start_offset=max(0, start),
-                    end_offset=max(0, start + len(source_text)),
-                    confidence=0.85,
-                ))
-            
-            return obligations
-            
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            return response.json()
+
+    try:
+        result = await retry_with_backoff(
+            _call_llm,
+            config=LLM_RETRY_CONFIG,
+        )
+        response_text = result.get("response", "[]")
+        if not validate_response(response_text, "json"):
+            logger.error("Obligation extraction model returned non-JSON content")
+            return []
+        obligations_data = json.loads(response_text)
+
+        if isinstance(obligations_data, dict) and "obligations" in obligations_data:
+            obligations_data = obligations_data["obligations"]
+
+        obligations: list[ExtractedObligation] = []
+        for i, item in enumerate(obligations_data):
+            source_text = item.get("source_text", "")
+            start = text.find(source_text[:50]) if source_text else 0
+
+            try:
+                obl_type = ObligationType(item.get("type", "other"))
+            except ValueError:
+                obl_type = ObligationType.OTHER
+
+            try:
+                party = ObligationParty(item.get("party", "counterparty"))
+            except ValueError:
+                party = ObligationParty.COUNTERPARTY
+
+            try:
+                recurrence = RecurrencePattern(item.get("recurrence", "once"))
+            except ValueError:
+                recurrence = RecurrencePattern.ONCE
+
+            obligations.append(ExtractedObligation(
+                id=f"obl-llm-{i}",
+                type=obl_type,
+                party=party,
+                description=item.get("description", ""),
+                source_text=source_text,
+                deadline=item.get("deadline"),
+                recurrence=recurrence,
+                trigger_event=item.get("trigger_event"),
+                penalty=item.get("penalty"),
+                start_offset=max(0, start),
+                end_offset=max(0, start + len(source_text)),
+                confidence=0.85,
+            ))
+
+        return obligations
+
     except Exception as e:
         logger.error(f"LLM obligation extraction failed: {e}")
         return []

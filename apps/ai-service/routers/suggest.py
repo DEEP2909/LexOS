@@ -12,11 +12,19 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from llm_safety import RetryConfig, retry_with_backoff
 from prompts import REDLINE_SUGGESTION, add_safety_guardrails, validate_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+LLM_RETRY_CONFIG = RetryConfig(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 
 class SuggestionType(str, Enum):
@@ -119,34 +127,40 @@ Return ONLY a JSON array where each item includes:
 
 No additional prose."""
 
-    try:
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": 0.2},
+    }
+
+    async def _call_llm() -> dict:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{ollama_url}/api/generate",
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.2}
-                }
+                json=payload,
             )
-            
             if response.status_code != 200:
-                return []
-            
-            result = response.json()
-            response_text = result.get("response", "[]")
-            if not validate_response(response_text, "json"):
-                logger.error("Redline model returned non-JSON content")
-                return []
-            suggestions = json.loads(response_text)
-            
-            if isinstance(suggestions, dict) and "suggestions" in suggestions:
-                suggestions = suggestions["suggestions"]
-            
-            return suggestions
-            
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            return response.json()
+
+    try:
+        result = await retry_with_backoff(
+            _call_llm,
+            config=LLM_RETRY_CONFIG,
+        )
+        response_text = result.get("response", "[]")
+        if not validate_response(response_text, "json"):
+            logger.error("Redline model returned non-JSON content")
+            return []
+        suggestions = json.loads(response_text)
+
+        if isinstance(suggestions, dict) and "suggestions" in suggestions:
+            suggestions = suggestions["suggestions"]
+
+        return suggestions
+
     except Exception as e:
         logger.error(f"LLM redline generation failed: {e}")
         return []

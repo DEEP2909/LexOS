@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg" alt="Node"/>
   <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"/>
   <img src="https://img.shields.io/badge/tests-481%20passed-brightgreen.svg" alt="Tests"/>
-  <img src="https://img.shields.io/badge/coverage-%3E50%25%20(Node)%20%7C%20%3E30%25%20(Python)-brightgreen.svg" alt="Coverage"/>
+  <img src="https://img.shields.io/badge/coverage-%3E78%25%20(Python)%20%7C%20%3E50%25%20(Node)-brightgreen.svg" alt="Coverage"/>
 </p>
 
 ---
@@ -214,6 +214,18 @@ Firm: Demo Law Firm LLP
 │  └──────────┘  └──────────┘  └──────────┘          │
 │                    FastAPI                           │
 └─────────────────────────────────────────────────────┘
+```
+
+### Service Communication Diagram (Mermaid)
+
+```mermaid
+flowchart LR
+  Web[Web App (Next.js)] --> API[API Server (Fastify)]
+  API --> PG[(PostgreSQL + pgvector)]
+  API --> Redis[(Redis / BullMQ)]
+  API --> S3[(S3 / MinIO)]
+  API --> AI[AI Service (FastAPI)]
+  AI --> Ollama[Ollama LLM]
 ```
 
 ### Tech Stack

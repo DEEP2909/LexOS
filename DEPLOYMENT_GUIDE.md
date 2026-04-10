@@ -20,8 +20,11 @@ This guide covers deployment to **AWS**, **Google Cloud Platform (GCP)**, and **
 10. [Monitoring Setup](#monitoring-setup)
 11. [Backup Strategy](#backup-strategy)
 12. [Security Hardening](#security-hardening)
-13. [CI/CD Pipeline](#cicd-pipeline)
-14. [Troubleshooting](#troubleshooting)
+13. [Authentication Configuration](#authentication-configuration)
+14. [CI/CD Pipeline](#cicd-pipeline)
+15. [Troubleshooting](#troubleshooting)
+16. [Post-Deployment Checklist](#post-deployment-checklist)
+17. [Support](#support)
 
 ---
 
@@ -934,7 +937,27 @@ spec:
       for: 5m
       labels:
         severity: critical
+      annotations:
+        summary: Pod restarts detected
+        
+    - alert: QueueDepthHigh
+      expr: sum(bullmq_queue_waiting_jobs) > 1000
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Queue depth is above expected baseline
+        
+    - alert: AuthFailuresSpike
+      expr: rate(auth_login_failures_total[5m]) > 5
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: Failed authentication attempts are spiking
 ```
+
+> Note: metric names for queue depth and auth failures depend on your exporter naming. Align these expressions with your actual Prometheus metric names.
 
 ---
 
@@ -1040,6 +1063,69 @@ spec:
         - ALL
       readOnlyRootFilesystem: true
 ```
+
+---
+
+## Authentication Configuration
+
+LexOS supports **SAML SSO**, **WebAuthn passkeys**, and **SCIM 2.0 provisioning**. Configure these in the API service environment before rollout.
+
+### SAML SSO
+
+Add these environment variables for each identity provider connection:
+
+```bash
+SAML_ENABLED=true
+SAML_ENTITY_ID=https://api.yourdomain.com/auth/saml/metadata
+SAML_ACS_URL=https://api.yourdomain.com/auth/saml/callback
+SAML_SLO_URL=https://api.yourdomain.com/auth/saml/logout
+SAML_IDP_METADATA_URL=https://idp.example.com/metadata
+SAML_IDP_CERT="-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----"
+SAML_NAMEID_FORMAT=urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
+```
+
+Deployment steps:
+1. Create a SAML application in your IdP (Okta/Azure AD/Google Workspace).
+2. Set ACS URL and Entity ID to the LexOS values above.
+3. Map email, first name, last name, and group/role attributes.
+4. Upload/download metadata and verify `/auth/saml/metadata` plus login callback paths.
+5. Test SP-initiated and IdP-initiated login in staging before production.
+
+### WebAuthn (Passkeys)
+
+Configure relying party values exactly to your production domain:
+
+```bash
+WEBAUTHN_ENABLED=true
+WEBAUTHN_RP_ID=app.yourdomain.com
+WEBAUTHN_RP_NAME=LexOS
+WEBAUTHN_ORIGIN=https://app.yourdomain.com
+WEBAUTHN_REQUIRE_RESIDENT_KEY=preferred
+WEBAUTHN_USER_VERIFICATION=preferred
+```
+
+Deployment steps:
+1. Ensure frontend origin and API CORS settings match the WebAuthn origin.
+2. Enable HTTPS everywhere (WebAuthn does not work on non-secure origins in production).
+3. Register a passkey on a test account, then verify sign-in and fallback MFA paths.
+
+### SCIM 2.0 Provisioning
+
+Use SCIM to automate user and group lifecycle from your IdP:
+
+```bash
+SCIM_ENABLED=true
+SCIM_BASE_URL=https://api.yourdomain.com/scim/v2
+SCIM_BEARER_TOKEN=generate-a-long-random-token
+SCIM_PROVISION_DEFAULT_ROLE=member
+SCIM_SYNC_DEPROVISION=true
+```
+
+Deployment steps:
+1. Enable SCIM in your IdP and configure the LexOS SCIM base URL.
+2. Set bearer token authentication in the IdP SCIM app.
+3. Map IdP user/group attributes to LexOS fields and roles.
+4. Validate create, update, deactivate, and group membership sync flows.
 
 ---
 

@@ -13,11 +13,19 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from explainability import explain_clause_extraction
+from llm_safety import RetryConfig, retry_with_backoff
 from prompts import CLAUSE_EXTRACTION, validate_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+LLM_RETRY_CONFIG = RetryConfig(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exponential_base=2.0,
+)
 
 # 24 USA-specific clause types
 CLAUSE_TYPES = [
@@ -312,61 +320,66 @@ async def extract_clauses_llm(
     if clause_types:
         prompt += f"\n\nOnly include clause_type values in this allowlist: {json.dumps(clause_types)}."
 
-    try:
+    payload: Dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.1,
+            "num_predict": 4096,
+        },
+    }
+
+    async def _call_llm() -> Dict[str, Any]:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{ollama_url}/api/generate",
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {
-                        "temperature": 0.1,
-                        "num_predict": 4096,
-                    }
-                }
+                json=payload,
             )
-            
             if response.status_code != 200:
-                logger.error(f"Ollama error: {response.status_code}")
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            return response.json()
+
+    try:
+        result = await retry_with_backoff(
+            _call_llm,
+            config=LLM_RETRY_CONFIG,
+        )
+        response_text = result.get("response", "")
+
+        # Parse JSON from response
+        try:
+            if not validate_response(response_text, "json"):
+                logger.error("Clause extraction model returned non-JSON content")
                 return []
-            
-            result = response.json()
-            response_text = result.get("response", "")
-            
-            # Parse JSON from response
-            try:
-                if not validate_response(response_text, "json"):
-                    logger.error("Clause extraction model returned non-JSON content")
-                    return []
-                clauses_data = json.loads(response_text)
-                if isinstance(clauses_data, dict) and "clauses" in clauses_data:
-                    clauses_data = clauses_data["clauses"]
-                
-                clauses = []
-                for item in clauses_data:
-                    if item.get("clause_type") in clause_types:
-                        clause_text = item.get("text", "")
-                        # Find position in original text
-                        start = text.find(clause_text[:100]) if clause_text else -1
-                        end = start + len(clause_text) if start >= 0 else -1
-                        
-                        clauses.append(ExtractedClause(
-                            clause_type=item["clause_type"],
-                            text=clause_text,
-                            start_offset=max(0, start),
-                            end_offset=max(0, end),
-                            confidence=float(item.get("confidence", 0.8)),
-                            metadata={"method": "llm", "model": model}
-                        ))
-                
-                return clauses
-                
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse LLM response: {e}")
-                return []
-                
+            clauses_data = json.loads(response_text)
+            if isinstance(clauses_data, dict) and "clauses" in clauses_data:
+                clauses_data = clauses_data["clauses"]
+
+            clauses = []
+            for item in clauses_data:
+                if item.get("clause_type") in clause_types:
+                    clause_text = item.get("text", "")
+                    # Find position in original text
+                    start = text.find(clause_text[:100]) if clause_text else -1
+                    end = start + len(clause_text) if start >= 0 else -1
+
+                    clauses.append(ExtractedClause(
+                        clause_type=item["clause_type"],
+                        text=clause_text,
+                        start_offset=max(0, start),
+                        end_offset=max(0, end),
+                        confidence=float(item.get("confidence", 0.8)),
+                        metadata={"method": "llm", "model": model}
+                    ))
+
+            return clauses
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            return []
+
     except Exception as e:
         logger.error(f"LLM extraction failed: {e}")
         return []
