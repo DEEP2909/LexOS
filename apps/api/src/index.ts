@@ -12,7 +12,7 @@ import multipart from '@fastify/multipart';
 import websocket from '@fastify/websocket';
 import { Redis } from 'ioredis';
 
-import { config, corsOrigins, rateLimits, isProduction, isTest } from './config.js';
+import { config, corsOrigins, rateLimits, isProduction, isDevelopment, isTest } from './config.js';
 import { logger } from './logger.js';
 import { pool, checkDatabaseHealth, closeDatabasePool } from './database.js';
 import { initializeAuth } from './auth.js';
@@ -36,7 +36,7 @@ import crypto from 'node:crypto';
 const fastify = Fastify({
   logger: {
     level: isProduction ? 'info' : 'debug',
-    transport: !isProduction
+    transport: isDevelopment
       ? {
           target: 'pino-pretty',
           options: { colorize: true },
