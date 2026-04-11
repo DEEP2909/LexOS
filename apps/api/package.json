@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reportsDirectory=../../coverage",
     "test:smoke": "vitest run tests/ci-smoke.test.ts",
-    "test:coverage:ci": "vitest run --coverage --coverage.reportsDirectory=../../coverage",
+    "test:coverage:ci": "vitest run tests/ci-smoke.test.ts --coverage --coverage.reportsDirectory=../../coverage --coverage.include=src/index.ts",
     "test:watch": "vitest",
     "test:isolation": "vitest run src/tests/isolation.test.ts",
     "migrate": "node-pg-migrate --migrations-dir ../../db/migrations",

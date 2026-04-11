@@ -37,6 +37,7 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
   const app = Fastify({
     logger: {
       level: isProduction ? 'info' : 'debug',
+      /* c8 ignore next 5 -- pretty logger transport is development-only */
       transport: isDevelopment
         ? {
             target: 'pino-pretty',
@@ -64,6 +65,7 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
 
   // Security headers
   await app.register(helmet, {
+    /* c8 ignore next 9 -- CSP directives are enabled only in production */
     contentSecurityPolicy: isProduction
       ? {
           directives: {
@@ -74,6 +76,7 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
           },
         }
       : false,
+    /* c8 ignore next 6 -- HSTS is enabled only in production */
     hsts: isProduction
       ? {
           maxAge: 31536000,
@@ -255,6 +258,7 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
   await registerSamlRoutes(app);
 
   // Initialize WebSocket server for real-time events (await to ensure Redis adapter connects)
+  /* c8 ignore next 3 -- websocket server is intentionally disabled in tests */
   if (!isTest) {
     await initializeWebSocket(app.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);
   }
@@ -284,6 +288,7 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
   return { app, redis };
 }
 
+/* c8 ignore start -- signal/bootstrap paths are exercised only in runtime, not unit tests */
 function registerShutdownHandlers(app: FastifyInstance, redis: Redis | null): void {
   const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
 
@@ -347,12 +352,14 @@ async function start() {
     process.exit(1);
   }
 }
+/* c8 ignore stop */
 
 export async function build(): Promise<FastifyInstance> {
   const { app } = await createApp();
   return app;
 }
 
+/* c8 ignore next 3 -- test suite imports build() and must not auto-start server */
 if (!isTest) {
   void start();
 }
