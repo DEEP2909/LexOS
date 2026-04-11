@@ -216,8 +216,8 @@ export interface Tenant {
   barState: string | null;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: Date | null;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
+  paddleCustomerId: string | null;
+  paddleSubscriptionId: string | null;
   logoUrl: string | null;
   settings: Record<string, unknown>;
   createdAt: Date;

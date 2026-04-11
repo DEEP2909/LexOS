@@ -1535,43 +1535,24 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const authReq = request as AuthenticatedRequest;
 
-      const tenant = await queryOne<{
-        plan: string;
-        billing_status: string;
-        monthly_doc_quota: number;
-        monthly_research_quota: number;
-      }>(
-        `SELECT plan, billing_status, monthly_doc_quota, monthly_research_quota
-         FROM tenants WHERE id = $1`,
-        [authReq.tenantId]
-      );
-
-      if (!tenant) {
-        return reply.status(404).send({ success: false, error: { message: 'Tenant not found' } });
-      }
-
-      // Get current month usage
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const usage = await queryOne<{ doc_count: number; research_count: number }>(
-        `SELECT 
-           (SELECT COUNT(*) FROM documents WHERE tenant_id = $1 AND created_at >= $2) as doc_count,
-           (SELECT COUNT(*) FROM research_history WHERE tenant_id = $1 AND created_at >= $2) as research_count`,
-        [authReq.tenantId, startOfMonth]
-      );
+      const { getBillingStatus } = await import('./billing.js');
+      const billingStatus = await getBillingStatus(authReq.tenantId);
 
       return {
         success: true,
         data: {
-          plan: tenant.plan,
-          status: tenant.billing_status,
+          plan: billingStatus.plan,
+          status: billingStatus.status,
+          currentPeriodEnd: billingStatus.currentPeriodEnd,
+          cancelAtPeriodEnd: billingStatus.cancelAtPeriodEnd,
+          trialEndsAt: billingStatus.trialEndsAt,
           usage: {
-            documents: usage?.doc_count || 0,
-            documentsLimit: tenant.monthly_doc_quota,
-            research: usage?.research_count || 0,
-            researchLimit: tenant.monthly_research_quota,
+            documents: billingStatus.usage.documentsThisMonth,
+            documentsLimit: billingStatus.usage.documentsLimit,
+            research: billingStatus.usage.researchThisMonth,
+            researchLimit: billingStatus.usage.researchLimit,
+            attorneys: billingStatus.usage.attorneysActive,
+            attorneysLimit: billingStatus.usage.attorneysLimit,
           },
         },
       };
@@ -1590,7 +1571,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         cancelUrl: z.string().url(),
       }).parse(request.body);
 
-      // Integration with Stripe via billing module
+      // Integration with Paddle via billing module
       try {
         const { createCheckoutSession } = await import('./billing.js');
         const billingContact = await queryOne<{ email: string; firm_name: string }>(
@@ -2450,19 +2431,22 @@ END:VCALENDAR`;
   // BILLING ADDITIONAL ROUTES
   // ============================================================
 
-  // POST /billing/portal - Create Stripe Customer Portal session
+  // POST /billing/portal - Create Paddle Customer Portal session
   fastify.post(
     '/billing/portal',
     { preHandler: [authenticateRequest, requireRoles('admin')] },
     async (request, reply) => {
       const authReq = request as AuthenticatedRequest;
       const body = z.object({
-        returnUrl: z.string().url(),
+        returnUrl: z.string().url().optional(),
       }).parse(request.body);
 
       try {
         const { createCustomerPortalSession } = await import('./billing.js');
-        const session = await createCustomerPortalSession(authReq.tenantId, body.returnUrl);
+        const session = await createCustomerPortalSession(
+          authReq.tenantId,
+          body.returnUrl || `${config.FRONTEND_URL}/billing`
+        );
         return { success: true, data: { url: session.url } };
       } catch (error) {
         logger.error({ error }, 'Failed to create portal session');

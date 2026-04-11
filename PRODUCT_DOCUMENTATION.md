@@ -619,7 +619,7 @@ Response with Sources
 │  │   PostgreSQL     │  │     S3        │  │   External       │             │
 │  │   + pgvector     │  │   Storage     │  │   Services       │             │
 │  │                  │  │               │  │                  │             │
-│  │  • 26 tables     │  │  • Documents  │  │  • Stripe        │             │
+│  │  • 26 tables     │  │  • Documents  │  │  • Paddle        │             │
 │  │  • HNSW index    │  │  • Quarantine │  │  • SendGrid      │             │
 │  │  • Full-text     │  │  • Exports    │  │  • ClamAV        │             │
 │  └──────────────────┘  └───────────────┘  └──────────────────┘             │
@@ -734,7 +734,7 @@ evidentis/
 │   │   │   ├── security.ts         # Password hashing, encryption
 │   │   │   ├── database.ts         # PostgreSQL connection pool
 │   │   │   ├── repository.ts       # Data access layer
-│   │   │   ├── billing.ts          # Stripe integration
+│   │   │   ├── billing.ts          # Paddle integration
 │   │   │   ├── billing-enforcement.ts  # Quota middleware
 │   │   │   ├── worker.ts           # BullMQ job processing
 │   │   │   ├── orchestrator.ts     # Document pipeline
@@ -894,7 +894,7 @@ evidentis/
 │ name            │     │ tenant_id (FK)  │     │ tenant_id (FK)  │
 │ slug            │     │ email           │     │ title           │
 │ plan            │     │ role            │     │ client_name     │
-│ stripe_*        │     │ mfa_enabled     │     │ matter_type     │
+│ paddle_*        │     │ mfa_enabled     │     │ matter_type     │
 │ settings        │     │ ...             │     │ status          │
 └─────────────────┘     └─────────────────┘     └────────┬────────┘
                                                          │
@@ -942,8 +942,8 @@ CREATE TABLE tenants (
     plan VARCHAR(50) DEFAULT 'starter',
     subscription_status VARCHAR(50) DEFAULT 'trialing',
     trial_ends_at TIMESTAMPTZ,
-    stripe_customer_id VARCHAR(255) UNIQUE,
-    stripe_subscription_id VARCHAR(255) UNIQUE,
+    paddle_customer_id VARCHAR(255) UNIQUE,
+    paddle_subscription_id VARCHAR(255) UNIQUE,
     settings JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -2009,7 +2009,7 @@ evidentis-documents/
 4. Create default playbook
 5. Create admin attorney account
 6. Send invitation email
-7. Set up Stripe customer (if billing enabled)
+7. Set up Paddle customer (if billing enabled)
 8. Create S3 folder structure
 9. Initialize quota tracking
 ```
@@ -2155,12 +2155,12 @@ describe('Tenant Isolation', () => {
 
 # 12. Billing & Subscription Management
 
-## 12.1 Stripe Integration
+## 12.1 Paddle Integration
 
 ### 12.1.1 Customer Lifecycle
 ```
 1. Trial Start (14 days):
-   - Create Stripe customer
+   - Create Paddle customer
    - No payment method required
    - Full access to Starter features
 
@@ -2186,13 +2186,14 @@ describe('Tenant Isolation', () => {
 ### 12.1.2 Webhook Events Handled
 ```typescript
 const HANDLED_EVENTS = [
-  'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'invoice.payment_succeeded',
-  'invoice.payment_failed',
-  'customer.updated',
+  'subscription.created',
+  'subscription.activated',
+  'subscription.updated',
+  'subscription.canceled',
+  'subscription.past_due',
+  'transaction.completed',
+  'transaction.paid',
+  'transaction.payment_failed',
 ];
 ```
 
@@ -2679,7 +2680,7 @@ pytest tests/ --cov=. --cov-config=.coveragerc --cov-report=json
 | Storage | S3 / GCS | Document storage |
 | Secrets | AWS SM / GCP SM | Secret management |
 | Email | SendGrid | Transactional email |
-| Payments | Stripe | Billing |
+| Payments | Paddle | Billing |
 | Monitoring | Datadog / Grafana | Observability |
 
 ## 17.3 CI/CD Pipeline

@@ -1,23 +1,34 @@
 /**
- * EvidentIS Stripe Billing Integration
- * Full subscription management with Checkout and Customer Portal
+ * EvidentIS Paddle Billing Integration
+ * Full subscription management with Paddle Billing and webhook processing.
  */
 
-import Stripe from 'stripe';
+import { EventName, Paddle, type EventEntity } from '@paddle/paddle-node-sdk';
 import { config } from './config.js';
 import { pool } from './database.js';
 import { logger } from './logger.js';
 import { auditRepo, tenantRepo } from './repository.js';
 import { sendPaymentFailedEmail } from './email.js';
-import crypto from 'crypto';
 
 // ============================================================================
-// Stripe Client
+// Paddle Client
 // ============================================================================
 
-const stripe = new Stripe(config.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
-});
+const paddle = config.PADDLE_API_KEY ? new Paddle(config.PADDLE_API_KEY) : null;
+
+function getPaddleClient(): Paddle {
+  if (!paddle) {
+    throw new Error('Paddle billing is not configured (missing PADDLE_API_KEY)');
+  }
+  return paddle;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
 
 // ============================================================================
 // Plan Definitions
@@ -27,7 +38,7 @@ export const PLANS = {
   starter: {
     name: 'Starter',
     price: 29900, // $299/month in cents
-    priceId: config.STRIPE_PRICE_STARTER,
+    priceId: config.PADDLE_PRICE_STARTER,
     features: {
       maxAttorneys: 5,
       maxDocumentsPerMonth: 100,
@@ -39,7 +50,7 @@ export const PLANS = {
   growth: {
     name: 'Growth',
     price: 89900, // $899/month
-    priceId: config.STRIPE_PRICE_GROWTH,
+    priceId: config.PADDLE_PRICE_GROWTH,
     features: {
       maxAttorneys: 25,
       maxDocumentsPerMonth: 500,
@@ -51,7 +62,7 @@ export const PLANS = {
   professional: {
     name: 'Professional',
     price: 219900, // $2,199/month
-    priceId: config.STRIPE_PRICE_PROFESSIONAL,
+    priceId: config.PADDLE_PRICE_PROFESSIONAL,
     features: {
       maxAttorneys: 100,
       maxDocumentsPerMonth: 2000,
@@ -76,34 +87,127 @@ export const PLANS = {
 
 export type PlanType = keyof typeof PLANS;
 
+interface SubscriptionEventData {
+  id: string;
+  status: string;
+  customerId: string;
+  currentBillingPeriod?: { endsAt: string } | null;
+  scheduledChange?: { action: string } | null;
+  items?: Array<{ price?: { id: string } | null }>;
+  customData?: Record<string, unknown> | null;
+}
+
+interface TransactionEventData {
+  id: string;
+  customerId: string | null;
+  checkout?: { url: string | null } | null;
+  details?: { totals?: { grandTotal: string } | null } | null;
+}
+
+function isPlanType(value: string): value is PlanType {
+  return Object.prototype.hasOwnProperty.call(PLANS, value);
+}
+
+function inferPlanFromPriceId(priceId: string | null | undefined): PlanType | null {
+  if (!priceId) {
+    return null;
+  }
+  if (config.PADDLE_PRICE_STARTER && priceId === config.PADDLE_PRICE_STARTER) {
+    return 'starter';
+  }
+  if (config.PADDLE_PRICE_GROWTH && priceId === config.PADDLE_PRICE_GROWTH) {
+    return 'growth';
+  }
+  if (config.PADDLE_PRICE_PROFESSIONAL && priceId === config.PADDLE_PRICE_PROFESSIONAL) {
+    return 'professional';
+  }
+  return null;
+}
+
+function getCustomDataValue(
+  customData: Record<string, unknown> | null | undefined,
+  keys: string[]
+): string | null {
+  for (const key of keys) {
+    const value = customData?.[key];
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function parseMinorAmount(amount: string | null | undefined): number {
+  const parsed = Number.parseInt(amount ?? '0', 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toUuidOrUndefined(value: string | null | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(value) ? value : undefined;
+}
+
+async function resolveTenantIdByCustomerId(customerId: string | null | undefined): Promise<string | null> {
+  if (!customerId) {
+    return null;
+  }
+
+  const tenant = await pool.query<{ id: string }>(
+    `SELECT id FROM tenants WHERE paddle_customer_id = $1`,
+    [customerId]
+  );
+  return tenant.rows[0]?.id ?? null;
+}
+
+async function resolveTenantContextFromSubscription(
+  subscription: SubscriptionEventData
+): Promise<{ tenantId: string | null; plan: PlanType | null }> {
+  const tenantIdFromCustomData = getCustomDataValue(subscription.customData, ['tenantId', 'tenant_id']);
+  const tenantId = tenantIdFromCustomData ?? await resolveTenantIdByCustomerId(subscription.customerId);
+
+  const planFromCustomData = getCustomDataValue(subscription.customData, ['plan']);
+  const validatedPlan = planFromCustomData && isPlanType(planFromCustomData) ? planFromCustomData : null;
+
+  const itemPriceId = subscription.items?.[0]?.price?.id ?? null;
+  const inferredPlan = inferPlanFromPriceId(itemPriceId);
+
+  return {
+    tenantId,
+    plan: validatedPlan ?? inferredPlan,
+  };
+}
+
 // ============================================================================
 // Customer Management
 // ============================================================================
 
-export async function getOrCreateStripeCustomer(tenantId: string, email: string, name: string): Promise<string> {
-  // Check if customer already exists
+export async function getOrCreatePaddleCustomer(
+  tenantId: string,
+  email: string,
+  name: string
+): Promise<string> {
   const tenant = await tenantRepo.findById(tenantId);
-  
-  if (tenant?.stripe_customer_id) {
-    return tenant.stripe_customer_id;
+  if (tenant?.paddle_customer_id) {
+    return tenant.paddle_customer_id;
   }
-  
-  // Create new customer
-  const customer = await stripe.customers.create({
+
+  const customer = await getPaddleClient().customers.create({
     email,
     name,
-    metadata: {
-      tenant_id: tenantId,
+    customData: {
+      tenantId,
     },
   });
-  
-  // Save customer ID
+
   await pool.query(
-    `UPDATE tenants SET stripe_customer_id = $2 WHERE id = $1`,
+    `UPDATE tenants SET paddle_customer_id = $2 WHERE id = $1`,
     [tenantId, customer.id]
   );
-  
-  logger.info({ tenantId, customerId: customer.id }, 'Created Stripe customer');
+
+  logger.info({ tenantId, customerId: customer.id }, 'Created Paddle customer');
   return customer.id;
 }
 
@@ -120,52 +224,42 @@ export async function createCheckoutSession(
   cancelUrl: string
 ): Promise<{ sessionId: string; url: string }> {
   const planConfig = PLANS[plan];
-  
+
   if (!planConfig.priceId) {
     throw new Error('Enterprise plan requires custom quote - contact sales');
   }
-  
-  const customerId = await getOrCreateStripeCustomer(tenantId, attorneyEmail, firmName);
-  
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [
+
+  const customerId = await getOrCreatePaddleCustomer(tenantId, attorneyEmail, firmName);
+  const transaction = await getPaddleClient().transactions.create({
+    items: [
       {
-        price: planConfig.priceId,
+        priceId: planConfig.priceId,
         quantity: 1,
       },
     ],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: {
-      tenant_id: tenantId,
+    customerId,
+    status: 'ready',
+    collectionMode: 'automatic',
+    customData: {
+      tenantId,
       plan,
+      successUrl,
+      cancelUrl,
     },
-    subscription_data: {
-      metadata: {
-        tenant_id: tenantId,
-        plan,
-      },
-    },
-    allow_promotion_codes: true,
-    billing_address_collection: 'required',
-    customer_update: {
-      address: 'auto',
-      name: 'auto',
+    checkout: {
+      url: successUrl,
     },
   });
-  
-  logger.info({ tenantId, plan, sessionId: session.id }, 'Created checkout session');
 
-  if (!session.url) {
-    throw new Error('Stripe checkout session URL missing');
+  const checkoutUrl = transaction.checkout?.url;
+  if (!checkoutUrl) {
+    throw new Error('Paddle checkout URL missing');
   }
-  
+
+  logger.info({ tenantId, plan, transactionId: transaction.id }, 'Created Paddle checkout transaction');
   return {
-    sessionId: session.id,
-    url: session.url,
+    sessionId: transaction.id,
+    url: checkoutUrl,
   };
 }
 
@@ -175,22 +269,29 @@ export async function createCheckoutSession(
 
 export async function createCustomerPortalSession(
   tenantId: string,
-  returnUrl: string
+  _returnUrl: string
 ): Promise<{ url: string }> {
   const tenant = await tenantRepo.findById(tenantId);
-  
-  if (!tenant?.stripe_customer_id) {
+
+  if (!tenant?.paddle_customer_id) {
     throw new Error('No billing account found. Please set up billing first.');
   }
-  
-  const session = await stripe.billingPortal.sessions.create({
-    customer: tenant.stripe_customer_id,
-    return_url: returnUrl,
-  });
-  
-  logger.info({ tenantId }, 'Created customer portal session');
-  
-  return { url: session.url };
+  if (!tenant?.paddle_subscription_id) {
+    throw new Error('No active subscription found for this tenant.');
+  }
+
+  const session = await getPaddleClient().customerPortalSessions.create(
+    tenant.paddle_customer_id,
+    [tenant.paddle_subscription_id]
+  );
+
+  const portalUrl = session.urls.general.overview;
+  if (!portalUrl) {
+    throw new Error('Paddle customer portal URL missing');
+  }
+
+  logger.info({ tenantId, portalSessionId: session.id }, 'Created Paddle customer portal session');
+  return { url: portalUrl };
 }
 
 // ============================================================================
@@ -213,33 +314,47 @@ export interface BillingStatus {
   };
 }
 
+function mapPaddleStatus(status: string | null | undefined): BillingStatus['status'] {
+  switch (status) {
+    case 'active':
+    case 'trialing':
+    case 'past_due':
+    case 'canceled':
+    case 'unpaid':
+      return status;
+    case 'paused':
+      return 'unpaid';
+    default:
+      return 'none';
+  }
+}
+
 export async function getBillingStatus(tenantId: string): Promise<BillingStatus> {
   const tenant = await tenantRepo.findById(tenantId);
-  
-  // Get quota usage
+
   const quotaResult = await pool.query(
     `SELECT monthly_doc_limit, monthly_research_limit, current_month_docs, current_month_research
      FROM tenant_ai_quotas WHERE tenant_id = $1`,
     [tenantId]
   );
-  
+
   const attorneyResult = await pool.query(
     `SELECT COUNT(*) FROM attorneys WHERE tenant_id = $1 AND status = 'active'`,
     [tenantId]
   );
-  
+
   const quota = quotaResult.rows[0] || {
     monthly_doc_limit: 100,
     monthly_research_limit: 500,
     current_month_docs: 0,
     current_month_research: 0,
   };
-  
-  const planConfig = PLANS[tenant?.plan as PlanType] || PLANS.starter;
-  
-  // Default status for no subscription
+
+  const plan: PlanType = (tenant?.plan && isPlanType(tenant.plan)) ? tenant.plan : 'starter';
+  const planConfig = PLANS[plan];
+
   const status: BillingStatus = {
-    plan: (tenant?.plan || 'starter') as PlanType,
+    plan,
     status: 'none',
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
@@ -249,29 +364,31 @@ export async function getBillingStatus(tenantId: string): Promise<BillingStatus>
       documentsLimit: planConfig.features.maxDocumentsPerMonth,
       researchThisMonth: quota.current_month_research,
       researchLimit: planConfig.features.maxResearchQueriesPerMonth,
-      attorneysActive: Number.parseInt(attorneyResult.rows[0].count),
+      attorneysActive: Number.parseInt(attorneyResult.rows[0].count, 10),
       attorneysLimit: planConfig.features.maxAttorneys,
     },
   };
-  
-  // Check trial status
+
   if (tenant?.trial_ends_at && new Date(tenant.trial_ends_at) > new Date()) {
     status.status = 'trialing';
   }
-  
-  // Check Stripe subscription
-  if (tenant?.stripe_subscription_id) {
+
+  if (tenant?.paddle_subscription_id) {
     try {
-      const subscription = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id);
-      
-      status.status = subscription.status as BillingStatus['status'];
-      status.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-      status.cancelAtPeriodEnd = subscription.cancel_at_period_end;
-    } catch (error: any) {
-      logger.warn({ tenantId, error: error.message }, 'Failed to fetch subscription');
+      const subscription = await getPaddleClient().subscriptions.get(tenant.paddle_subscription_id);
+      status.status = mapPaddleStatus(subscription.status);
+      status.currentPeriodEnd = subscription.currentBillingPeriod?.endsAt
+        ? new Date(subscription.currentBillingPeriod.endsAt)
+        : null;
+      status.cancelAtPeriodEnd = subscription.scheduledChange?.action === 'cancel';
+    } catch (error) {
+      logger.warn(
+        { tenantId, error: getErrorMessage(error) },
+        'Failed to fetch Paddle subscription'
+      );
     }
   }
-  
+
   return status;
 }
 
@@ -288,18 +405,17 @@ export async function checkQuota(
      FROM tenant_ai_quotas WHERE tenant_id = $1`,
     [tenantId]
   );
-  
+
   if (!quota.rows[0]) {
-    // Create default quota
     await pool.query(
       `INSERT INTO tenant_ai_quotas (tenant_id) VALUES ($1) ON CONFLICT DO NOTHING`,
       [tenantId]
     );
     return { allowed: true, remaining: 100, limit: 100 };
   }
-  
+
   const q = quota.rows[0];
-  
+
   if (quotaType === 'document') {
     const limit = q.monthly_doc_limit;
     const used = q.current_month_docs;
@@ -321,7 +437,7 @@ export async function checkQuota(
 
 export async function incrementQuota(tenantId: string, quotaType: 'document' | 'research'): Promise<void> {
   const column = quotaType === 'document' ? 'current_month_docs' : 'current_month_research';
-  
+
   await pool.query(
     `UPDATE tenant_ai_quotas SET ${column} = ${column} + 1 WHERE tenant_id = $1`,
     [tenantId]
@@ -332,195 +448,202 @@ export async function incrementQuota(tenantId: string, quotaType: 'document' | '
 // Webhook Handling
 // ============================================================================
 
-export async function handleStripeWebhook(
+export async function handlePaddleWebhook(
   rawBody: Buffer,
   signature: string
 ): Promise<{ received: boolean }> {
-  let event: Stripe.Event;
-  
+  const webhookSecret = config.PADDLE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error('PADDLE_WEBHOOK_SECRET is not configured');
+  }
+
+  let event: EventEntity;
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      config.STRIPE_WEBHOOK_SECRET || ''
-    );
-  } catch (error: any) {
-    logger.error({ error: error.message }, 'Stripe webhook signature verification failed');
+    event = await getPaddleClient().webhooks.unmarshal(rawBody.toString(), webhookSecret, signature);
+  } catch (error) {
+    logger.error({ error: getErrorMessage(error) }, 'Paddle webhook signature verification failed');
     throw new Error('Invalid signature');
   }
-  
-  logger.info({ type: event.type, id: event.id }, 'Processing Stripe webhook');
-  
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
-      await handleCheckoutCompleted(session);
+
+  logger.info({ type: event.eventType, id: event.eventId }, 'Processing Paddle webhook');
+
+  switch (event.eventType) {
+    case EventName.SubscriptionCreated:
+    case EventName.SubscriptionActivated:
+    case EventName.SubscriptionUpdated:
+    case EventName.SubscriptionTrialing:
+    case EventName.SubscriptionPastDue:
+    case EventName.SubscriptionResumed:
+    case EventName.SubscriptionPaused:
+      await handleSubscriptionUpsert(event.data as SubscriptionEventData, event.eventType);
       break;
-    }
-    
-    case 'customer.subscription.created':
-    case 'customer.subscription.updated': {
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionUpdated(subscription);
+
+    case EventName.SubscriptionCanceled:
+      await handleSubscriptionCanceled(event.data as SubscriptionEventData);
       break;
-    }
-    
-    case 'customer.subscription.deleted': {
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionCanceled(subscription);
+
+    case EventName.TransactionCompleted:
+    case EventName.TransactionPaid:
+      await handlePaymentSucceeded(event.data as TransactionEventData);
       break;
-    }
-    
-    case 'invoice.payment_succeeded': {
-      const invoice = event.data.object as Stripe.Invoice;
-      await handlePaymentSucceeded(invoice);
+
+    case EventName.TransactionPaymentFailed:
+      await handlePaymentFailed(event.data as TransactionEventData);
       break;
-    }
-    
-    case 'invoice.payment_failed': {
-      const invoice = event.data.object as Stripe.Invoice;
-      await handlePaymentFailed(invoice);
-      break;
-    }
-    
+
     default:
-      logger.debug({ type: event.type }, 'Unhandled Stripe event');
+      logger.debug({ type: event.eventType }, 'Unhandled Paddle webhook event');
   }
-  
+
   return { received: true };
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  const tenantId = session.metadata?.tenant_id;
-  const plan = session.metadata?.plan as PlanType;
-  
+async function handleSubscriptionUpsert(subscription: SubscriptionEventData, eventType: string): Promise<void> {
+  const { tenantId, plan } = await resolveTenantContextFromSubscription(subscription);
   if (!tenantId) {
-    logger.warn({ sessionId: session.id }, 'Checkout completed without tenant_id');
+    logger.warn({ subscriptionId: subscription.id }, 'Subscription event could not be linked to tenant');
     return;
   }
-  
-  // Update tenant with subscription info
+
   await pool.query(
-    `UPDATE tenants 
-     SET stripe_subscription_id = $2, plan = $3, subscription_status = 'active', trial_ends_at = NULL
+    `UPDATE tenants
+     SET paddle_subscription_id = $2,
+         subscription_status = $3,
+         plan = COALESCE($4, plan),
+         trial_ends_at = CASE WHEN $3 = 'active' THEN NULL ELSE trial_ends_at END
      WHERE id = $1`,
-    [tenantId, session.subscription, plan]
+    [tenantId, subscription.id, mapPaddleStatus(subscription.status), plan]
   );
-  
-  // Update quotas based on plan
-  const planConfig = PLANS[plan];
-  await pool.query(
-    `INSERT INTO tenant_ai_quotas (tenant_id, monthly_doc_limit, monthly_research_limit, api_tier)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (tenant_id) DO UPDATE SET 
-       monthly_doc_limit = $2, monthly_research_limit = $3, api_tier = $4`,
-    [tenantId, planConfig.features.maxDocumentsPerMonth, 
-     planConfig.features.maxResearchQueriesPerMonth, planConfig.features.aiTier]
-  );
-  
-  // Audit log
+
+  if (plan) {
+    const planConfig = PLANS[plan];
+    await pool.query(
+      `INSERT INTO tenant_ai_quotas (tenant_id, monthly_doc_limit, monthly_research_limit, api_tier)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (tenant_id) DO UPDATE SET
+         monthly_doc_limit = $2,
+         monthly_research_limit = $3,
+         api_tier = $4`,
+      [
+        tenantId,
+        planConfig.features.maxDocumentsPerMonth,
+        planConfig.features.maxResearchQueriesPerMonth,
+        planConfig.features.aiTier,
+      ]
+    );
+  }
+
   await auditRepo.create({
     tenantId,
-    eventType: 'subscription.created',
+    eventType: eventType === EventName.SubscriptionCreated ? 'subscription.created' : 'subscription.updated',
     objectType: 'subscription',
-    objectId: session.subscription as string,
-    metadata: { plan, sessionId: session.id },
+    objectId: toUuidOrUndefined(subscription.id),
+    metadata: {
+      paddleSubscriptionId: subscription.id,
+      status: subscription.status,
+      plan,
+      customerId: subscription.customerId,
+    },
   });
-  
-  logger.info({ tenantId, plan }, 'Subscription activated');
+
+  logger.info({ tenantId, subscriptionId: subscription.id, status: subscription.status, plan }, 'Subscription updated');
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-  const tenantId = subscription.metadata?.tenant_id;
-  
+async function handleSubscriptionCanceled(subscription: SubscriptionEventData): Promise<void> {
+  const { tenantId } = await resolveTenantContextFromSubscription(subscription);
   if (!tenantId) {
-    logger.warn({ subscriptionId: subscription.id }, 'Subscription updated without tenant_id');
+    logger.warn({ subscriptionId: subscription.id }, 'Subscription cancellation could not be linked to tenant');
     return;
   }
-  
-  await pool.query(
-    `UPDATE tenants SET subscription_status = $2 WHERE id = $1`,
-    [tenantId, subscription.status]
-  );
-  
-  logger.info({ tenantId, status: subscription.status }, 'Subscription updated');
-}
 
-async function handleSubscriptionCanceled(subscription: Stripe.Subscription): Promise<void> {
-  const tenantId = subscription.metadata?.tenant_id;
-  
-  if (!tenantId) return;
-  
   await pool.query(
-    `UPDATE tenants SET subscription_status = 'canceled', plan = 'starter' WHERE id = $1`,
-    [tenantId]
+    `UPDATE tenants
+     SET paddle_subscription_id = $2,
+         subscription_status = 'canceled',
+         plan = 'starter'
+     WHERE id = $1`,
+    [tenantId, subscription.id]
   );
-  
-  // Reset to free tier quotas
+
   await pool.query(
-    `UPDATE tenant_ai_quotas SET monthly_doc_limit = 10, monthly_research_limit = 20, api_tier = 'opensource'
+    `UPDATE tenant_ai_quotas
+     SET monthly_doc_limit = 10,
+         monthly_research_limit = 20,
+         api_tier = 'opensource'
      WHERE tenant_id = $1`,
     [tenantId]
   );
-  
+
   await auditRepo.create({
     tenantId,
     eventType: 'subscription.canceled',
     objectType: 'subscription',
-    objectId: subscription.id,
+    objectId: toUuidOrUndefined(subscription.id),
+    metadata: {
+      paddleSubscriptionId: subscription.id,
+    },
   });
-  
-  logger.info({ tenantId }, 'Subscription canceled');
+
+  logger.info({ tenantId, subscriptionId: subscription.id }, 'Subscription canceled');
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-  const customerId = invoice.customer as string;
-  
-  // Find tenant by customer ID
-  const tenant = await pool.query(
-    `SELECT id FROM tenants WHERE stripe_customer_id = $1`,
-    [customerId]
-  );
-  
-  if (!tenant.rows[0]) return;
-  const tenantId = tenant.rows[0].id;
-  
-  // Reset monthly quotas on successful payment
+async function handlePaymentSucceeded(transaction: TransactionEventData): Promise<void> {
+  const tenantId = await resolveTenantIdByCustomerId(transaction.customerId);
+  if (!tenantId) {
+    return;
+  }
+
   await pool.query(
-    `UPDATE tenant_ai_quotas 
-     SET current_month_docs = 0, current_month_research = 0, quota_reset_at = now() + INTERVAL '1 month'
+    `UPDATE tenant_ai_quotas
+     SET current_month_docs = 0,
+         current_month_research = 0,
+         quota_reset_at = now() + INTERVAL '1 month'
      WHERE tenant_id = $1`,
     [tenantId]
   );
-  
+
+  await pool.query(
+    `UPDATE tenants
+     SET subscription_status = 'active'
+     WHERE id = $1 AND subscription_status != 'canceled'`,
+    [tenantId]
+  );
+
+  const amountPaid = parseMinorAmount(transaction.details?.totals?.grandTotal);
   await auditRepo.create({
     tenantId,
     eventType: 'invoice.paid',
     objectType: 'invoice',
-    objectId: invoice.id,
-    metadata: { amount: invoice.amount_paid },
+    objectId: toUuidOrUndefined(transaction.id),
+    metadata: {
+      amount: amountPaid,
+      paddleTransactionId: transaction.id,
+    },
   });
-  
-  logger.info({ tenantId, invoiceId: invoice.id, amount: invoice.amount_paid }, 'Payment succeeded');
+
+  logger.info({ tenantId, transactionId: transaction.id, amount: amountPaid }, 'Payment succeeded');
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-  const customerId = invoice.customer as string;
-  
-  const tenant = await pool.query(
-    `SELECT id, settings FROM tenants WHERE stripe_customer_id = $1`,
-    [customerId]
+async function handlePaymentFailed(transaction: TransactionEventData): Promise<void> {
+  if (!transaction.customerId) {
+    return;
+  }
+
+  const tenant = await pool.query<{ id: string }>(
+    `SELECT id FROM tenants WHERE paddle_customer_id = $1`,
+    [transaction.customerId]
   );
-  
-  if (!tenant.rows[0]) return;
+
+  if (!tenant.rows[0]) {
+    return;
+  }
   const tenantId = tenant.rows[0].id;
-  
-  // Update status
+
   await pool.query(
     `UPDATE tenants SET subscription_status = 'past_due' WHERE id = $1`,
     [tenantId]
   );
-  
+
   const adminResult = await pool.query<{ email: string }>(
     `SELECT email
      FROM attorneys
@@ -533,29 +656,34 @@ async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   );
 
   const adminEmail = adminResult.rows[0]?.email;
+  const amountDue = parseMinorAmount(transaction.details?.totals?.grandTotal);
+  const invoiceUrl = transaction.checkout?.url || `${config.FRONTEND_URL}/billing`;
+
   if (adminEmail) {
-    const invoiceUrl = invoice.hosted_invoice_url || `${config.FRONTEND_URL}/billing`;
     try {
-      await sendPaymentFailedEmail(adminEmail, invoice.amount_due || 0, invoiceUrl);
-    } catch (notifyError: any) {
+      await sendPaymentFailedEmail(adminEmail, amountDue, invoiceUrl);
+    } catch (notifyError) {
       logger.error(
-        { tenantId, invoiceId: invoice.id, error: notifyError.message },
+        { tenantId, transactionId: transaction.id, error: getErrorMessage(notifyError) },
         'Failed to send payment failed email'
       );
     }
   } else {
-    logger.warn({ tenantId, invoiceId: invoice.id }, 'No active admin found for payment failure email');
+    logger.warn({ tenantId, transactionId: transaction.id }, 'No active admin found for payment failure email');
   }
-  
+
   await auditRepo.create({
     tenantId,
     eventType: 'invoice.failed',
     objectType: 'invoice',
-    objectId: invoice.id,
-    metadata: { amount: invoice.amount_due },
+    objectId: toUuidOrUndefined(transaction.id),
+    metadata: {
+      amount: amountDue,
+      paddleTransactionId: transaction.id,
+    },
   });
-  
-  logger.warn({ tenantId, invoiceId: invoice.id }, 'Payment failed');
+
+  logger.warn({ tenantId, transactionId: transaction.id, amount: amountDue }, 'Payment failed');
 }
 
 // ============================================================================
@@ -563,16 +691,13 @@ async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
 // ============================================================================
 
 export async function reportUsage(
-  subscriptionItemId: string,
+  subscriptionId: string,
   quantity: number,
   action: 'set' | 'increment' = 'increment'
 ): Promise<void> {
-  await stripe.subscriptionItems.createUsageRecord(
-    subscriptionItemId,
-    {
-      quantity,
-      timestamp: Math.floor(Date.now() / 1000),
-      action,
-    }
+  logger.error(
+    { subscriptionId, quantity, action },
+    'Metered usage reporting requires a Paddle metered-price configuration'
   );
+  throw new Error('Paddle metered usage reporting is not configured');
 }

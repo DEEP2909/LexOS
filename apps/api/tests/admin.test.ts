@@ -474,7 +474,7 @@ describe('Billing Endpoints', () => {
         },
       });
       
-      // May fail if Stripe is not configured, which is okay
+      // May fail if Paddle is not configured, which is okay
       expect([200, 201, 500]).toContain(response.statusCode);
     });
     

@@ -23,7 +23,7 @@ import type {
 // ============================================================================
 
 const TENANT_COLS = `id, name, slug, plan, region, bar_state, subscription_status, 
-  trial_ends_at, stripe_customer_id, stripe_subscription_id, logo_url, settings, created_at`;
+  trial_ends_at, paddle_customer_id, paddle_subscription_id, logo_url, settings, created_at`;
 
 const ATTORNEY_COLS = `id, tenant_id, email, display_name, role, practice_group, 
   bar_number, bar_state, mfa_enabled, failed_login_attempts, locked_until, 
@@ -92,9 +92,9 @@ export const tenantRepo = {
     return result.rows[0];
   },
 
-  async updateStripeIds(tenantId: string, customerId: string, subscriptionId: string) {
+  async updatePaddleIds(tenantId: string, customerId: string, subscriptionId: string) {
     await pool.query(
-      `UPDATE tenants SET stripe_customer_id = $2, stripe_subscription_id = $3
+      `UPDATE tenants SET paddle_customer_id = $2, paddle_subscription_id = $3
        WHERE id = $1`,
       [tenantId, customerId, subscriptionId]
     );

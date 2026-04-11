@@ -76,9 +76,13 @@ services:
       S3_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      # Stripe
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      # Paddle
+      PADDLE_VENDOR_ID: ${PADDLE_VENDOR_ID}
+      PADDLE_API_KEY: ${PADDLE_API_KEY}
+      PADDLE_WEBHOOK_SECRET: ${PADDLE_WEBHOOK_SECRET}
+      PADDLE_PRICE_STARTER: ${PADDLE_PRICE_STARTER}
+      PADDLE_PRICE_GROWTH: ${PADDLE_PRICE_GROWTH}
+      PADDLE_PRICE_PROFESSIONAL: ${PADDLE_PRICE_PROFESSIONAL}
       # Telemetry
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4318}
       OTEL_SERVICE_NAME: evidentis-api
@@ -109,7 +113,8 @@ services:
       - jwt_secret
       - jwt_refresh_secret
       - encryption_key
-      - stripe_secret_key
+      - paddle_api_key
+      - paddle_webhook_secret
     networks:
       - internal
       - traefik
@@ -565,7 +570,9 @@ secrets:
     external: true
   encryption_key:
     external: true
-  stripe_secret_key:
+  paddle_api_key:
+    external: true
+  paddle_webhook_secret:
     external: true
   postgres_password:
     external: true

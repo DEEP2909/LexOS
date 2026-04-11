@@ -33,8 +33,8 @@ exports.up = (pgm) => {
     bar_state: { type: 'text' },
     subscription_status: { type: 'text', notNull: true, default: "'trial'" },
     trial_ends_at: { type: 'timestamptz' },
-    stripe_customer_id: { type: 'text' },
-    stripe_subscription_id: { type: 'text' },
+    paddle_customer_id: { type: 'text' },
+    paddle_subscription_id: { type: 'text' },
     logo_url: { type: 'text' },
     settings: { type: 'jsonb', notNull: true, default: pgm.func("'{}'") },
     created_at: {

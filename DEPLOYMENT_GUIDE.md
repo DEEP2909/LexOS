@@ -66,7 +66,7 @@ unzip terraform_1.7.0_linux_amd64.zip && sudo mv terraform /usr/local/bin/
 
 - [ ] Cloud provider account (AWS/GCP/Azure)
 - [ ] Domain name for your deployment
-- [ ] Stripe account for billing
+- [ ] Paddle account for billing
 - [ ] Email provider (SendGrid/AWS SES) for notifications
 - [ ] Container registry access (Docker Hub/ECR/GCR/ACR)
 
@@ -132,13 +132,14 @@ CLAMAV_HOST=clamav
 CLAMAV_PORT=3310
 
 # =============================================================================
-# STRIPE BILLING
+# PADDLE BILLING
 # =============================================================================
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_GROWTH=price_...
-STRIPE_PRICE_PROFESSIONAL=price_...
+PADDLE_VENDOR_ID=...
+PADDLE_API_KEY=pdl_live_...
+PADDLE_WEBHOOK_SECRET=pdl_ntfset_...
+PADDLE_PRICE_STARTER=pri_...
+PADDLE_PRICE_GROWTH=pri_...
+PADDLE_PRICE_PROFESSIONAL=pri_...
 
 # =============================================================================
 # EMAIL
@@ -352,12 +353,16 @@ aws secretsmanager create-secret \
   --name evidentis/production/encryption \
   --secret-string '{"key": "your-64-char-hex-key"}'
 
-# Store Stripe keys
+# Store Paddle keys
 aws secretsmanager create-secret \
-  --name evidentis/production/stripe \
+  --name evidentis/production/paddle \
   --secret-string '{
-    "secret_key": "sk_live_...",
-    "webhook_secret": "whsec_..."
+    "vendor_id": "your-vendor-id",
+    "api_key": "pdl_live_...",
+    "webhook_secret": "pdl_ntfset_...",
+    "price_starter": "pri_...",
+    "price_growth": "pri_...",
+    "price_professional": "pri_..."
   }'
 ```
 

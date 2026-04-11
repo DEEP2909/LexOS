@@ -226,12 +226,12 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
   // ============================================================
 
   // IMPORTANT: Content type parser MUST be registered BEFORE routes (Fastify requirement)
-  // This custom parser keeps raw buffer for Stripe webhook while parsing JSON for others
+  // This custom parser keeps raw buffer for Paddle webhook while parsing JSON for others
   app.addContentTypeParser(
     'application/json',
     { parseAs: 'buffer', bodyLimit: 1048576 },
     (req, body, done) => {
-      // For Stripe webhook endpoint, keep raw buffer for signature verification
+      // For Paddle webhook endpoint, keep raw buffer for signature verification
       if (req.url === '/billing/webhook') {
         done(null, body);
       } else {
@@ -264,23 +264,23 @@ async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null 
   }
 
   // ============================================================
-  // STRIPE WEBHOOK ROUTE
+  // PADDLE WEBHOOK ROUTE
   // ============================================================
 
-  // POST /billing/webhook - Stripe webhook handler
+  // POST /billing/webhook - Paddle webhook handler
   app.post('/billing/webhook', async (request, reply) => {
-    const signature = request.headers['stripe-signature'] as string;
+    const signature = request.headers['paddle-signature'] as string;
 
     if (!signature) {
-      return reply.status(400).send({ success: false, error: { message: 'Missing stripe-signature header' } });
+      return reply.status(400).send({ success: false, error: { message: 'Missing paddle-signature header' } });
     }
 
     try {
-      const { handleStripeWebhook } = await import('./billing.js');
-      const result = await handleStripeWebhook(request.body as Buffer, signature);
+      const { handlePaddleWebhook } = await import('./billing.js');
+      const result = await handlePaddleWebhook(request.body as Buffer, signature);
       return reply.status(200).send(result);
     } catch (error) {
-      logger.error({ error }, 'Stripe webhook error');
+      logger.error({ error }, 'Paddle webhook error');
       return reply.status(400).send({ success: false, error: { message: 'Webhook verification failed' } });
     }
   });

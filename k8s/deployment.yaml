@@ -45,14 +45,30 @@ spec:
       remoteRef:
         key: evidentis/production/encryption
         property: key
-    - secretKey: STRIPE_SECRET_KEY
+    - secretKey: PADDLE_VENDOR_ID
       remoteRef:
-        key: evidentis/production/stripe
-        property: secret_key
-    - secretKey: STRIPE_WEBHOOK_SECRET
+        key: evidentis/production/paddle
+        property: vendor_id
+    - secretKey: PADDLE_API_KEY
       remoteRef:
-        key: evidentis/production/stripe
+        key: evidentis/production/paddle
+        property: api_key
+    - secretKey: PADDLE_WEBHOOK_SECRET
+      remoteRef:
+        key: evidentis/production/paddle
         property: webhook_secret
+    - secretKey: PADDLE_PRICE_STARTER
+      remoteRef:
+        key: evidentis/production/paddle
+        property: price_starter
+    - secretKey: PADDLE_PRICE_GROWTH
+      remoteRef:
+        key: evidentis/production/paddle
+        property: price_growth
+    - secretKey: PADDLE_PRICE_PROFESSIONAL
+      remoteRef:
+        key: evidentis/production/paddle
+        property: price_professional
 
 ---
 # ConfigMap for non-sensitive configuration

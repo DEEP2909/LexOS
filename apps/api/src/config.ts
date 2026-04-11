@@ -75,12 +75,13 @@ const configSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_SECURE: z.enum(['true', 'false']).default('false'),
 
-  // Stripe
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
-  STRIPE_PRICE_STARTER: z.string().optional(),
-  STRIPE_PRICE_GROWTH: z.string().optional(),
-  STRIPE_PRICE_PROFESSIONAL: z.string().optional(),
+  // Paddle
+  PADDLE_VENDOR_ID: z.string().optional(),
+  PADDLE_API_KEY: z.string().optional(),
+  PADDLE_WEBHOOK_SECRET: z.string().optional(),
+  PADDLE_PRICE_STARTER: z.string().optional(),
+  PADDLE_PRICE_GROWTH: z.string().optional(),
+  PADDLE_PRICE_PROFESSIONAL: z.string().optional(),
 
   // Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),

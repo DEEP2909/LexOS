@@ -90,7 +90,7 @@ EvidentIS automates contract analysis, extracts key clauses, assesses risks agai
 ### 💳 Flexible Billing
 - **4 Pricing Tiers**: Starter, Growth, Professional, Enterprise
 - **Usage-Based Quotas**: Documents, research queries, attorney seats
-- **Stripe Integration**: Secure payment processing
+- **Paddle Integration**: Merchant-of-record payment processing
 - **Dunning Alerts**: Automatic admin email on invoice payment failure
 - **Self-Service Portal**: Manage subscriptions, invoices, payment methods
 
@@ -257,7 +257,7 @@ evidentis/
 │   │   │   ├── index.ts     # Server entry point
 │   │   │   ├── routes.ts    # All API endpoints (~120 routes)
 │   │   │   ├── auth.ts      # JWT, MFA, session management
-│   │   │   ├── billing.ts   # Stripe integration
+│   │   │   ├── billing.ts   # Paddle integration
 │   │   │   └── ...
 │   │   └── tests/           # API tests (325 tests)
 │   │
@@ -276,7 +276,7 @@ evidentis/
 │       └── tests/           # Frontend tests (90 tests)
 │
 ├── db/
-│   └── migrations/          # Database migrations (11 files)
+│   └── migrations/          # Database migrations (12 files)
 │
 ├── k8s/                     # Kubernetes deployment manifests
 │

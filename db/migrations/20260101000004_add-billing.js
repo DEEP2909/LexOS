@@ -105,11 +105,11 @@ exports.up = (pgm) => {
   
   pgm.createIndex('tenant_ai_quotas', 'tenant_id');
   
-  // Add Stripe-related columns to tenants table if not exists
+  // Add Paddle-related columns to tenants table if not exists
   pgm.sql(`
     ALTER TABLE tenants 
-    ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
-    ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
+    ADD COLUMN IF NOT EXISTS paddle_customer_id TEXT,
+    ADD COLUMN IF NOT EXISTS paddle_subscription_id TEXT,
     ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'none',
     ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS billing_email TEXT,
@@ -121,50 +121,50 @@ exports.up = (pgm) => {
     DO $$
     BEGIN
       IF EXISTS (
-        SELECT stripe_customer_id
+        SELECT paddle_customer_id
         FROM tenants
-        WHERE stripe_customer_id IS NOT NULL
-        GROUP BY stripe_customer_id
+        WHERE paddle_customer_id IS NOT NULL
+        GROUP BY paddle_customer_id
         HAVING COUNT(*) > 1
       ) THEN
-        RAISE EXCEPTION 'Duplicate stripe_customer_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
+        RAISE EXCEPTION 'Duplicate paddle_customer_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
       END IF;
 
       IF NOT EXISTS (
         SELECT 1
         FROM pg_constraint
-        WHERE conname = 'tenants_stripe_customer_id_unique'
+        WHERE conname = 'tenants_paddle_customer_id_unique'
           AND conrelid = 'tenants'::regclass
       ) THEN
         ALTER TABLE tenants
-          ADD CONSTRAINT tenants_stripe_customer_id_unique UNIQUE (stripe_customer_id);
+          ADD CONSTRAINT tenants_paddle_customer_id_unique UNIQUE (paddle_customer_id);
       END IF;
 
       IF EXISTS (
-        SELECT stripe_subscription_id
+        SELECT paddle_subscription_id
         FROM tenants
-        WHERE stripe_subscription_id IS NOT NULL
-        GROUP BY stripe_subscription_id
+        WHERE paddle_subscription_id IS NOT NULL
+        GROUP BY paddle_subscription_id
         HAVING COUNT(*) > 1
       ) THEN
-        RAISE EXCEPTION 'Duplicate stripe_subscription_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
+        RAISE EXCEPTION 'Duplicate paddle_subscription_id values exist; deduplicate tenant billing records before enforcing uniqueness.';
       END IF;
 
       IF NOT EXISTS (
         SELECT 1
         FROM pg_constraint
-        WHERE conname = 'tenants_stripe_subscription_id_unique'
+        WHERE conname = 'tenants_paddle_subscription_id_unique'
           AND conrelid = 'tenants'::regclass
       ) THEN
         ALTER TABLE tenants
-          ADD CONSTRAINT tenants_stripe_subscription_id_unique UNIQUE (stripe_subscription_id);
+          ADD CONSTRAINT tenants_paddle_subscription_id_unique UNIQUE (paddle_subscription_id);
       END IF;
     END
     $$;
   `);
   
-  pgm.createIndex('tenants', 'stripe_customer_id', {
-    name: 'idx_tenants_stripe_customer',
+  pgm.createIndex('tenants', 'paddle_customer_id', {
+    name: 'idx_tenants_paddle_customer',
     ifNotExists: true,
   });
 };
@@ -172,11 +172,11 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.dropTable('tenant_ai_quotas');
   
-  // Remove Stripe columns from tenants
+  // Remove Paddle columns from tenants
   pgm.sql(`
     ALTER TABLE tenants 
-    DROP COLUMN IF EXISTS stripe_customer_id,
-    DROP COLUMN IF EXISTS stripe_subscription_id,
+    DROP COLUMN IF EXISTS paddle_customer_id,
+    DROP COLUMN IF EXISTS paddle_subscription_id,
     DROP COLUMN IF EXISTS subscription_status,
     DROP COLUMN IF EXISTS trial_ends_at,
     DROP COLUMN IF EXISTS billing_email,
