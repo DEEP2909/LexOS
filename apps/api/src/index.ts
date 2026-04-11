@@ -3,7 +3,7 @@
  * Main entry point for the Fastify API server
  */
 
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import cookie from '@fastify/cookie';
@@ -33,277 +33,284 @@ import crypto from 'node:crypto';
 // SERVER SETUP
 // ============================================================
 
-const fastify = Fastify({
-  logger: {
-    level: isProduction ? 'info' : 'debug',
-    transport: isDevelopment
+async function createApp(): Promise<{ app: FastifyInstance; redis: Redis | null }> {
+  const app = Fastify({
+    logger: {
+      level: isProduction ? 'info' : 'debug',
+      transport: isDevelopment
+        ? {
+            target: 'pino-pretty',
+            options: { colorize: true },
+          }
+        : undefined,
+    },
+    trustProxy: isProduction,
+    requestIdHeader: 'x-request-id',
+    requestIdLogLabel: 'requestId',
+  });
+
+  // ============================================================
+  // PLUGINS
+  // ============================================================
+
+  // CORS
+  await app.register(cors, {
+    origin: corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    strictPreflight: false,
+  });
+
+  // Security headers
+  await app.register(helmet, {
+    contentSecurityPolicy: isProduction
       ? {
-          target: 'pino-pretty',
-          options: { colorize: true },
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'blob:'],
+          },
         }
-      : undefined,
-  },
-  trustProxy: isProduction,
-  requestIdHeader: 'x-request-id',
-  requestIdLogLabel: 'requestId',
-});
+      : false,
+    hsts: isProduction
+      ? {
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
+      : false,
+  });
 
-// ============================================================
-// PLUGINS
-// ============================================================
-
-// CORS
-await fastify.register(cors, {
-  origin: corsOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-  strictPreflight: false,
-});
-
-// Security headers
-await fastify.register(helmet, {
-  contentSecurityPolicy: isProduction
-    ? {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'blob:'],
-        },
-      }
-    : false,
-  hsts: isProduction
-    ? {
-        maxAge: 31536000,
-        includeSubDomains: true,
-      }
-    : false,
-});
-
-// Cookies - Issue #9 fix: use random key in dev instead of hardcoded string
-const cookieSecret = config.APP_ENCRYPTION_KEY?.slice(0, 32) 
-  ?? crypto.randomBytes(16).toString('hex');
-if (!config.APP_ENCRYPTION_KEY) {
-  logger.warn('⚠️  APP_ENCRYPTION_KEY not set — using ephemeral cookie secret (not for production!)');
-}
-await fastify.register(cookie, {
-  secret: cookieSecret,
-  parseOptions: {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'strict',
-    path: '/',
-  },
-});
-
-// Rate limiting with Redis
-const redis = isTest ? null : new Redis(config.REDIS_URL);
-await fastify.register(rateLimit, {
-  global: true,
-  max: rateLimits.general.requests,
-  timeWindow: rateLimits.general.windowMs,
-  ...(redis ? { redis } : {}),
-  keyGenerator: (request) => {
-    // Use tenant ID for authenticated requests, IP for others
-    const tenantId = (request as unknown as { tenantId?: string }).tenantId;
-    return tenantId || request.ip;
-  },
-});
-
-// Multipart file uploads
-await fastify.register(multipart, {
-  limits: {
-    fileSize: config.MAX_FILE_SIZE_BYTES,
-    files: 10,
-  },
-});
-
-// WebSocket support
-await fastify.register(websocket, {
-  options: {
-    maxPayload: 1048576,
-  },
-});
-
-// ============================================================
-// CUSTOM PLUGINS
-// ============================================================
-
-// Tenant isolation middleware - enforces tenant_id on all queries
-await fastify.register(registerTenantIsolation);
-logger.info('Tenant isolation middleware registered');
-
-// Additional security hardening (beyond @fastify/helmet)
-await fastify.register(registerSecurityHardening);
-logger.info('Security hardening middleware registered');
-
-// ============================================================
-// DECORATORS
-// ============================================================
-
-// Add tenant context to requests
-fastify.decorateRequest('tenantId', null);
-fastify.decorateRequest('attorneyId', null);
-fastify.decorateRequest('attorneyRole', null);
-
-// ============================================================
-// HOOKS
-// ============================================================
-
-// Request logging
-fastify.addHook('onRequest', async (request) => {
-  request.log.info({ method: request.method, url: request.url }, 'Request started');
-});
-
-// Response logging
-fastify.addHook('onResponse', async (request, reply) => {
-  request.log.info(
-    { method: request.method, url: request.url, statusCode: reply.statusCode },
-    'Request completed'
-  );
-});
-
-// Error handling
-fastify.setErrorHandler(async (error, request, reply) => {
-  request.log.error({ err: error }, 'Request error');
-
-  // Don't expose internal errors in production
-  if (isProduction && error.statusCode !== 400 && error.statusCode !== 401 && error.statusCode !== 403 && error.statusCode !== 404) {
-    return reply.status(500).send({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An internal error occurred',
-      },
-    });
+  // Cookies - Issue #9 fix: use random key in dev instead of hardcoded string
+  const cookieSecret = config.APP_ENCRYPTION_KEY?.slice(0, 32) ?? crypto.randomBytes(16).toString('hex');
+  if (!config.APP_ENCRYPTION_KEY) {
+    logger.warn('⚠️  APP_ENCRYPTION_KEY not set — using ephemeral cookie secret (not for production!)');
   }
-
-  return reply.status(error.statusCode || 500).send({
-    success: false,
-    error: {
-      code: error.code || 'ERROR',
-      message: error.message,
+  await app.register(cookie, {
+    secret: cookieSecret,
+    parseOptions: {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      path: '/',
     },
   });
-});
 
-// ============================================================
-// HEALTH ENDPOINTS
-// ============================================================
-
-fastify.get('/health/live', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
-
-fastify.get('/health/ready', async (request, reply) => {
-  const checks = {
-    database: await checkDatabaseHealth(),
-    redis: redis ? redis.status === 'ready' : true,
-    clamav: await checkClamAVHealth(),
-  };
-
-  const healthy = Object.values(checks).every(Boolean);
-
-  return reply.status(healthy ? 200 : 503).send({
-    status: healthy ? 'ok' : 'degraded',
-    checks,
-    timestamp: new Date().toISOString(),
+  // Rate limiting with Redis
+  const redis = isTest ? null : new Redis(config.REDIS_URL);
+  await app.register(rateLimit, {
+    global: true,
+    max: rateLimits.general.requests,
+    timeWindow: rateLimits.general.windowMs,
+    ...(redis ? { redis } : {}),
+    keyGenerator: (request) => {
+      // Use tenant ID for authenticated requests, IP for others
+      const tenantId = (request as unknown as { tenantId?: string }).tenantId;
+      return tenantId || request.ip;
+    },
   });
-});
 
-// ============================================================
-// ROUTES
-// ============================================================
+  // Multipart file uploads
+  await app.register(multipart, {
+    limits: {
+      fileSize: config.MAX_FILE_SIZE_BYTES,
+      files: 10,
+    },
+  });
 
-// IMPORTANT: Content type parser MUST be registered BEFORE routes (Fastify requirement)
-// This custom parser keeps raw buffer for Stripe webhook while parsing JSON for others
-fastify.addContentTypeParser(
-  'application/json',
-  { parseAs: 'buffer', bodyLimit: 1048576 },
-  (req, body, done) => {
-    // For Stripe webhook endpoint, keep raw buffer for signature verification
-    if (req.url === '/billing/webhook') {
-      done(null, body);
-    } else {
-      // For all other endpoints, parse as JSON
-      try {
-        const json = JSON.parse(body.toString());
-        done(null, json);
-      } catch (err) {
-        done(err as Error, undefined);
+  // WebSocket support
+  await app.register(websocket, {
+    options: {
+      maxPayload: 1048576,
+    },
+  });
+
+  // ============================================================
+  // CUSTOM PLUGINS
+  // ============================================================
+
+  // Tenant isolation middleware - enforces tenant_id on all queries
+  await app.register(registerTenantIsolation);
+  logger.info('Tenant isolation middleware registered');
+
+  // Additional security hardening (beyond @fastify/helmet)
+  await app.register(registerSecurityHardening);
+  logger.info('Security hardening middleware registered');
+
+  // ============================================================
+  // DECORATORS
+  // ============================================================
+
+  // Add tenant context to requests
+  app.decorateRequest('tenantId', null);
+  app.decorateRequest('attorneyId', null);
+  app.decorateRequest('attorneyRole', null);
+
+  // ============================================================
+  // HOOKS
+  // ============================================================
+
+  // Request logging
+  app.addHook('onRequest', async (request) => {
+    request.log.info({ method: request.method, url: request.url }, 'Request started');
+  });
+
+  // Response logging
+  app.addHook('onResponse', async (request, reply) => {
+    request.log.info(
+      { method: request.method, url: request.url, statusCode: reply.statusCode },
+      'Request completed'
+    );
+  });
+
+  // Error handling
+  app.setErrorHandler(async (error, request, reply) => {
+    request.log.error({ err: error }, 'Request error');
+
+    // Don't expose internal errors in production
+    if (
+      isProduction &&
+      error.statusCode !== 400 &&
+      error.statusCode !== 401 &&
+      error.statusCode !== 403 &&
+      error.statusCode !== 404
+    ) {
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'An internal error occurred',
+        },
+      });
+    }
+
+    return reply.status(error.statusCode || 500).send({
+      success: false,
+      error: {
+        code: error.code || 'ERROR',
+        message: error.message,
+      },
+    });
+  });
+
+  // ============================================================
+  // HEALTH ENDPOINTS
+  // ============================================================
+
+  app.get('/health/live', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
+  app.get('/health/ready', async (_request, reply) => {
+    const checks = {
+      database: await checkDatabaseHealth(),
+      redis: redis ? redis.status === 'ready' : true,
+      clamav: await checkClamAVHealth(),
+    };
+
+    const healthy = Object.values(checks).every(Boolean);
+
+    return reply.status(healthy ? 200 : 503).send({
+      status: healthy ? 'ok' : 'degraded',
+      checks,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // ============================================================
+  // ROUTES
+  // ============================================================
+
+  // IMPORTANT: Content type parser MUST be registered BEFORE routes (Fastify requirement)
+  // This custom parser keeps raw buffer for Stripe webhook while parsing JSON for others
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'buffer', bodyLimit: 1048576 },
+    (req, body, done) => {
+      // For Stripe webhook endpoint, keep raw buffer for signature verification
+      if (req.url === '/billing/webhook') {
+        done(null, body);
+      } else {
+        // For all other endpoints, parse as JSON
+        try {
+          const json = JSON.parse(body.toString());
+          done(null, json);
+        } catch (err) {
+          done(err as Error, undefined);
+        }
       }
     }
+  );
+
+  // Add version negotiation before routes (Issue #6 fix)
+  addVersionNegotiation(app);
+
+  await registerRoutes(app);
+
+  // Register SSO/SCIM/WebAuthn/SAML routes (Issue #1 fix)
+  await app.register(scimRoutes);
+  await registerSsoRoutes(app);
+  registerWebAuthnRoutes(app, pool);
+  await registerSamlRoutes(app);
+
+  // Initialize WebSocket server for real-time events (await to ensure Redis adapter connects)
+  if (!isTest) {
+    await initializeWebSocket(app.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);
   }
-);
 
-// Add version negotiation before routes (Issue #6 fix)
-addVersionNegotiation(fastify);
+  // ============================================================
+  // STRIPE WEBHOOK ROUTE
+  // ============================================================
 
-await registerRoutes(fastify);
+  // POST /billing/webhook - Stripe webhook handler
+  app.post('/billing/webhook', async (request, reply) => {
+    const signature = request.headers['stripe-signature'] as string;
 
-// Register SSO/SCIM/WebAuthn/SAML routes (Issue #1 fix)
-await fastify.register(scimRoutes);
-await registerSsoRoutes(fastify);
-registerWebAuthnRoutes(fastify, pool);
-await registerSamlRoutes(fastify);
+    if (!signature) {
+      return reply.status(400).send({ success: false, error: { message: 'Missing stripe-signature header' } });
+    }
 
-// Initialize WebSocket server for real-time events (await to ensure Redis adapter connects)
-if (!isTest) {
-  await initializeWebSocket(fastify.server, config.REDIS_URL, config.JWT_PUBLIC_KEY_PATH);
+    try {
+      const { handleStripeWebhook } = await import('./billing.js');
+      const result = await handleStripeWebhook(request.body as Buffer, signature);
+      return reply.status(200).send(result);
+    } catch (error) {
+      logger.error({ error }, 'Stripe webhook error');
+      return reply.status(400).send({ success: false, error: { message: 'Webhook verification failed' } });
+    }
+  });
+
+  return { app, redis };
 }
 
-// ============================================================
-// STRIPE WEBHOOK ROUTE
-// ============================================================
-
-// POST /billing/webhook - Stripe webhook handler
-fastify.post('/billing/webhook', async (request, reply) => {
-  const signature = request.headers['stripe-signature'] as string;
-  
-  if (!signature) {
-    return reply.status(400).send({ success: false, error: { message: 'Missing stripe-signature header' } });
-  }
-
-  try {
-    const { handleStripeWebhook } = await import('./billing.js');
-    const result = await handleStripeWebhook(request.body as Buffer, signature);
-    return reply.status(200).send(result);
-  } catch (error) {
-    logger.error({ error }, 'Stripe webhook error');
-    return reply.status(400).send({ success: false, error: { message: 'Webhook verification failed' } });
-  }
-});
-
-// ============================================================
-// GRACEFUL SHUTDOWN
-// ============================================================
-
-if (!isTest) {
+function registerShutdownHandlers(app: FastifyInstance, redis: Redis | null): void {
   const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
 
   for (const signal of signals) {
-    process.on(signal, async () => {
-      logger.info({ signal }, 'Received shutdown signal');
+    process.once(signal, () => {
+      void (async () => {
+        logger.info({ signal }, 'Received shutdown signal');
 
-      // Close server
-      await fastify.close();
-      logger.info('Server closed');
+        // Close server
+        await app.close();
+        logger.info('Server closed');
 
-      // Close orchestrator (FlowProducer Redis connection)
-      await closeOrchestrator();
-      logger.info('Orchestrator closed');
+        // Close orchestrator (FlowProducer Redis connection)
+        await closeOrchestrator();
+        logger.info('Orchestrator closed');
 
-      // Close Redis
-      if (redis) {
-        await redis.quit();
-        logger.info('Redis connection closed');
-      }
+        // Close Redis
+        if (redis) {
+          await redis.quit();
+          logger.info('Redis connection closed');
+        }
 
-      // Close database pool
-      await closeDatabasePool();
+        // Close database pool
+        await closeDatabasePool();
 
-      process.exit(0);
+        process.exit(0);
+      })();
     });
   }
 }
@@ -325,8 +332,11 @@ async function start() {
     }
     logger.info('Database connection verified');
 
-    // Start server
-    await fastify.listen({
+    // Build and start server
+    const { app, redis } = await createApp();
+    registerShutdownHandlers(app, redis);
+
+    await app.listen({
       port: config.PORT,
       host: config.HOST,
     });
@@ -338,8 +348,9 @@ async function start() {
   }
 }
 
-export async function build() {
-  return fastify;
+export async function build(): Promise<FastifyInstance> {
+  const { app } = await createApp();
+  return app;
 }
 
 if (!isTest) {

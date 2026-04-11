@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg" alt="Node"/>
   <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"/>
   <img src="https://img.shields.io/badge/tests-481%20passed-brightgreen.svg" alt="Tests"/>
-  <img src="https://img.shields.io/badge/coverage-%3E78%25%20(Python)%20%7C%20%3E50%25%20(Node)-brightgreen.svg" alt="Coverage"/>
+  <img src="https://img.shields.io/badge/coverage-%3E78%25%20(Python)%20%7C%20%3E70%25%20(Node)-brightgreen.svg" alt="Coverage"/>
 </p>
 
 ---
